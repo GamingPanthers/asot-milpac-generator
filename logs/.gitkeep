@@ -1,0 +1,6 @@
+# Log files directory
+
+Logs are written to this directory by the logging service.
+
+- `combined.log` - All log events
+- `error.log` - Error events only

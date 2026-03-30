@@ -1,0 +1,124 @@
+{
+  "medals": [
+    {
+      "id": "Service",
+      "name": "Service Medal",
+      "description": "Awarded for meritorious service",
+      "color": "#FFD700"
+    },
+    {
+      "id": "Valor",
+      "name": "Medal of Valor",
+      "description": "Awarded for exceptional bravery",
+      "color": "#FF6B6B"
+    },
+    {
+      "id": "Commendation",
+      "name": "Certificate of Commendation",
+      "description": "Awarded for outstanding achievement",
+      "color": "#4ECDC4"
+    },
+    {
+      "id": "Achievement",
+      "name": "Achievement Medal",
+      "description": "Awarded for significant accomplishments",
+      "color": "#45B7D1"
+    }
+  ],
+  "citations": [
+    {
+      "id": "1year",
+      "name": "1 Year Service",
+      "color": "#CCCCCC"
+    },
+    {
+      "id": "2year",
+      "name": "2 Year Service",
+      "color": "#666666"
+    },
+    {
+      "id": "5year",
+      "name": "5 Year Service",
+      "color": "#333333"
+    },
+    {
+      "id": "ExpR",
+      "name": "Expert Rifleman",
+      "color": "#8B4513"
+    }
+  ],
+  "ranks": [
+    {
+      "id": "PVT",
+      "name": "Private",
+      "abbreviation": "PVT"
+    },
+    {
+      "id": "CPL",
+      "name": "Corporal",
+      "abbreviation": "CPL"
+    },
+    {
+      "id": "SGT",
+      "name": "Sergeant",
+      "abbreviation": "SGT"
+    },
+    {
+      "id": "SSG",
+      "name": "Staff Sergeant",
+      "abbreviation": "SSG"
+    },
+    {
+      "id": "SFC",
+      "name": "Sergeant First Class",
+      "abbreviation": "SFC"
+    },
+    {
+      "id": "MSG",
+      "name": "Master Sergeant",
+      "abbreviation": "MSG"
+    },
+    {
+      "id": "1LT",
+      "name": "First Lieutenant",
+      "abbreviation": "1LT"
+    },
+    {
+      "id": "CPT",
+      "name": "Captain",
+      "abbreviation": "CPT"
+    },
+    {
+      "id": "MAJ",
+      "name": "Major",
+      "abbreviation": "MAJ"
+    },
+    {
+      "id": "COL",
+      "name": "Colonel",
+      "abbreviation": "COL"
+    }
+  ],
+  "uniforms": [
+    {
+      "id": "Blue",
+      "name": "Blue Dress Uniform",
+      "color": "#0033CC"
+    },
+    {
+      "id": "Green",
+      "name": "Green Service Uniform",
+      "color": "#006600"
+    },
+    {
+      "id": "Desert",
+      "name": "Desert Combat Uniform",
+      "color": "#CCAA66"
+    },
+    {
+      "id": "White",
+      "name": "White Dress Uniform",
+      "color": "#EEEEEE"
+    }
+  ]
+}
