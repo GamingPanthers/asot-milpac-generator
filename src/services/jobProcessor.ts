@@ -1,9 +1,10 @@
 import { Job } from 'bullmq';
 import { GenerationJob, GenerationLog as GenerationLogType } from '../types';
-import { GenerationLog } from '../models';
+import { GenerationLogModel } from '../models';
 import imageGeneratorService from './imageGenerator';
 import storageService from './storage';
 import memberService from './member';
+import WebIntegrationService from './webIntegration';
 import logger from '../utils/logger';
 
 /**
@@ -29,6 +30,9 @@ export class JobProcessor {
       // Update member record with image metadata
       await memberService.updateMemberImage(memberID, imagePath);
 
+      // Notify milpac-web of successful generation
+      await WebIntegrationService.notifyImageGeneration(memberID, imagePath);
+
       // Log successful generation
       const executionTime = Date.now() - startTime;
       const imageSize = imageBuffer.length;
@@ -36,6 +40,7 @@ export class JobProcessor {
       await this.logGeneration({
         memberID,
         jobId: job.id || '',
+        timestamp: new Date(),
         status: 'success',
         executionTime,
         imageSize,
@@ -63,6 +68,7 @@ export class JobProcessor {
       await this.logGeneration({
         memberID,
         jobId: job.id || '',
+        timestamp: new Date(),
         status: 'failed',
         executionTime,
         error: errorMessage,
@@ -84,7 +90,7 @@ export class JobProcessor {
    */
   private static async logGeneration(log: GenerationLogType): Promise<void> {
     try {
-      await GenerationLog.create(log);
+      await GenerationLogModel.create(log);
       logger.debug('Generation logged', { memberID: log.memberID, status: log.status });
     } catch (error) {
       logger.error('Failed to log generation', { memberID: log.memberID, error });
@@ -97,7 +103,7 @@ export class JobProcessor {
    */
   static async getGenerationHistory(memberID: string, limit: number = 10): Promise<GenerationLogType[]> {
     try {
-      const logs = await GenerationLog.find({ memberID }).sort({ timestamp: -1 }).limit(limit);
+      const logs = await GenerationLogModel.find({ memberID }).sort({ timestamp: -1 }).limit(limit);
       return logs as GenerationLogType[];
     } catch (error) {
       logger.error('Failed to fetch generation history', { memberID, error });

@@ -1,3 +1,4 @@
+// @ts-ignore
 import { PNG } from 'pngjs';
 import { MemberData } from '../types';
 import { config } from '../config';
@@ -91,7 +92,7 @@ export class ImageGeneratorService {
 
         const stream = png
           .pack()
-          .on('data', (chunk) => {
+          .on('data', (chunk: any) => {
             chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
           })
           .on('end', () => {
@@ -99,7 +100,7 @@ export class ImageGeneratorService {
             logger.info('Image generated successfully', { memberID, size: buffer.length });
             resolve(buffer);
           })
-          .on('error', (error) => {
+          .on('error', (error: any) => {
             logger.error('PNG encoding error', { error });
             reject(error);
           });
@@ -184,7 +185,7 @@ export class ImageGeneratorService {
 
         png
           .pack()
-          .on('data', (chunk) => {
+          .on('data', (chunk: any) => {
             chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
           })
           .on('end', () => {
@@ -192,7 +193,7 @@ export class ImageGeneratorService {
             logger.info('Placeholder image generated', { memberID, size: buffer.length });
             resolve(buffer);
           })
-          .on('error', (error) => {
+          .on('error', (error: any) => {
             logger.error('PNG encoding error', { error });
             reject(error);
           });

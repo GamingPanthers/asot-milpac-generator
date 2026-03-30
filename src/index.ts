@@ -68,7 +68,9 @@ async function startServer(): Promise<void> {
       await shutdown();
     });
   } catch (error) {
-    logger.error('Failed to start server', { error });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : '';
+    logger.error('Failed to start server', { error: errorMessage, stack: errorStack });
     process.exit(1);
   }
 }

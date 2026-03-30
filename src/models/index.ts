@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { StoredMember, GenerationLog } from '../types';
+import { StoredMember, GenerationLog as GenerationLogType } from '../types';
 
 /**
  * MongoDB Schema for Member data
@@ -30,7 +30,7 @@ const memberSchema = new Schema<StoredMember & Document>(
 /**
  * MongoDB Schema for Generation Logs
  */
-const generationLogSchema = new Schema<GenerationLog & Document>(
+const generationLogSchema = new Schema<GenerationLogType & Document>(
   {
     memberID: { type: String, required: true, index: true },
     jobId: { type: String, required: true, unique: true },
@@ -51,7 +51,7 @@ const generationLogSchema = new Schema<GenerationLog & Document>(
 generationLogSchema.index({ timestamp: 1 }, { expireAfterSeconds: 2592000 });
 
 export const Member = mongoose.model<StoredMember & Document>('Member', memberSchema);
-export const GenerationLog = mongoose.model<GenerationLog & Document>(
+export const GenerationLogModel = mongoose.model<GenerationLogType & Document>(
   'GenerationLog',
   generationLogSchema
 );

@@ -127,3 +127,6 @@ export interface ApiResponse<T = any> {
   error?: string;
   code?: number;
 }
+
+// Re-export MILPAC types
+export type { MilpacData, Rank } from './milpac';

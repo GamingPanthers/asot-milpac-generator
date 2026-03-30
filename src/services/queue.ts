@@ -14,7 +14,10 @@ export class QueueService {
   private worker: Worker<GenerationJob> | null = null;
 
   private constructor() {
-    this.redis = new Redis(config.REDIS_URL);
+    // BullMQ requires maxRetriesPerRequest to be null
+    this.redis = new Redis(config.REDIS_URL, {
+      maxRetriesPerRequest: null,
+    });
     this.queue = new Queue('image-generation', {
       connection: this.redis,
       defaultJobOptions: {
@@ -23,7 +26,6 @@ export class QueueService {
           type: 'exponential',
           delay: 2000,
         },
-        timeout: config.JOB_TIMEOUT,
       },
     });
 
@@ -44,26 +46,8 @@ export class QueueService {
    * Setup queue event listeners
    */
   private setupQueueEvents(): void {
-    this.queue.on('error', (error) => {
-      logger.error('Queue error', { error });
-    });
-
-    this.queue.on('waiting', (job) => {
-      logger.debug('Job waiting', { jobId: job.id });
-    });
-
-    this.queue.on('active', (job) => {
-      logger.info('Job processing', { jobId: job.id, memberID: job.data.memberID });
-    });
-
-    this.queue.on('completed', (job) => {
-      logger.info('Job completed', { jobId: job.id, memberID: job.data.memberID });
-    });
-
-    this.queue.on('failed', (job, error) => {
-      if (job) {
-        logger.error('Job failed', { jobId: job.id, memberID: job.data.memberID, error: error.message });
-      }
+    this.queue.on('error', (error: Error) => {
+      logger.error('Queue error', { error: error.message });
     });
   }
 
