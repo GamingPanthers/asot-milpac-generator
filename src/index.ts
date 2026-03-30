@@ -1,4 +1,5 @@
 import express, { Application } from 'express';
+import path from 'path';
 import { config, validateConfig } from './config';
 import logger from './utils/logger';
 import databaseService from './services/database';
@@ -29,6 +30,9 @@ async function startServer(): Promise<void> {
       next();
     });
 
+    // Serve generated images as static files
+    app.use('/milpac', express.static(config.IMAGE_OUTPUT_DIR));
+
     // Routes
     app.use('/', routes);
 
@@ -54,6 +58,7 @@ async function startServer(): Promise<void> {
       logger.info(`✓ Server starting on port: ${config.PORT}`);
       logger.info(`✓ Environment: ${config.NODE_ENV}`);
       logger.info(`✓ Image output directory: ${config.IMAGE_OUTPUT_DIR}`);
+      logger.info(`✓ Images available at: http://localhost:${config.PORT}/milpac/{memberId}.png`);
       logger.info(`✓ Test webhook endpoint: POST http://localhost:${config.PORT}/webhook`);
     });
 

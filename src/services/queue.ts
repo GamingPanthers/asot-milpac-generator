@@ -68,15 +68,30 @@ export class QueueService {
   }
 
   /**
-   * Get job status
+   * Get job status with result data
    */
-  async getJobStatus(jobId: string): Promise<string | null> {
+  async getJobStatus(jobId: string): Promise<any> {
     try {
       const job = await this.queue.getJob(jobId);
       if (!job) return null;
 
       const state = await job.getState();
-      return state;
+      
+      // Get job result if completed
+      const result = state === 'completed' ? job.returnvalue : null;
+      
+      // Convert file path to URL
+      let imageUrl = null;
+      if (result?.imagePath) {
+        const memberId = result.memberId || job.data?.memberID;
+        imageUrl = `http://localhost:${config.PORT}/milpac/${memberId}.png`;
+      }
+      
+      return {
+        state,
+        result,
+        imageUrl,
+      };
     } catch (error) {
       logger.error('Failed to get job status', { jobId, error });
       return null;

@@ -55,6 +55,7 @@ export class JobProcessor {
 
       return {
         success: true,
+        memberId: memberID,
         memberID,
         imagePath,
         size: imageSize,

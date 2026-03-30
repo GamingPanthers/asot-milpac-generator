@@ -158,14 +158,24 @@ export class WebhookHandler {
         return;
       }
 
-      const status = await queueService.getJobStatus(jobId);
+      const jobData = await queueService.getJobStatus(jobId);
+
+      if (!jobData) {
+        res.status(404).json({
+          status: 'error',
+          message: 'Job not found',
+          code: 404,
+        });
+        return;
+      }
 
       res.status(200).json({
         status: 'success',
         message: 'Job status retrieved',
         data: {
           jobId,
-          status,
+          status: jobData.state,
+          imageUrl: jobData.imageUrl,
         },
       });
     } catch (error) {
