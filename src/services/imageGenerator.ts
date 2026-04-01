@@ -2,11 +2,11 @@
 import { PNG } from 'pngjs';
 import { MemberData } from '../types';
 import { config } from '../config';
-import { milpacFieldMap } from '../config/milpacFieldMap';
 import logger from '../utils/logger';
 import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
+import { getAssetInfo, getAssetsInfo } from '../lib/mongo';
 
 /**
  * Military uniform image generator using pngjs
@@ -34,18 +34,7 @@ export class ImageGeneratorService {
         },
       });
 
-      // Helper to map database value to asset ID using the mapping file
-      const mapAssetId = (dbValue: string) => {
-        if (!Array.isArray(milpacFieldMap)) {
-          logger.warn('milpacFieldMap is not defined or not an array, falling back to dbValue', { dbValue });
-          return dbValue;
-        }
-        const mapping = milpacFieldMap.find(m => m && (m.dbId === dbValue || (Array.isArray(m.aliases) && m.aliases.includes(dbValue))));
-        if (!mapping) {
-          logger.warn('No mapping found for dbValue, falling back to dbValue', { dbValue });
-        }
-        return mapping ? mapping.generatorId : dbValue;
-      };
+      // DB-driven: mapAssetId will be replaced by DB lookups
 
       // Helper to resolve asset path
       const asset = (folder: string, name: string) =>
@@ -56,103 +45,96 @@ export class ImageGeneratorService {
 
       // Rank
       if (data.rank) {
-        const rankAssetId = mapAssetId(data.rank);
-        const rankPath = asset('ranks', rankAssetId);
-        logger.info('Adding rank layer', { rank: data.rank, rankAssetId, rankPath });
-        if (fs.existsSync(rankPath)) {
-          layers.push({ input: rankPath, top: 100, left: 50 });
-        } else {
-          logger.warn('Rank asset not found', { rank: data.rank, rankAssetId, rankPath });
+        const rankAsset = await getAssetInfo('milpac_ranks', data.rank);
+        if (rankAsset && rankAsset.assetFile) {
+          const rankPath = asset('ranks', rankAsset.assetFile);
+          logger.info('Adding rank layer', { rank: data.rank, rankPath });
+          if (fs.existsSync(rankPath)) {
+            layers.push({ input: rankPath, top: 100, left: 50 });
+          } else {
+            logger.warn('Rank asset not found', { rank: data.rank, rankPath });
+          }
         }
       }
 
       // Badge (corps-badges)
       if (data.badge) {
-        const badgeAssetId = mapAssetId(data.badge);
-        const badgePath = asset('corps-badges', badgeAssetId);
-        logger.info('Adding badge layer', { badge: data.badge, badgeAssetId, badgePath });
-        if (fs.existsSync(badgePath)) {
-          layers.push({ input: badgePath, top: 800, left: 50 });
-        } else {
-          logger.warn('Badge asset not found', { badge: data.badge, badgeAssetId, badgePath });
+        const badgeAsset = await getAssetInfo('milpac_badges', data.badge);
+        if (badgeAsset && badgeAsset.assetFile) {
+          const badgePath = asset('corps-badges', badgeAsset.assetFile);
+          logger.info('Adding badge layer', { badge: data.badge, badgePath });
+          if (fs.existsSync(badgePath)) {
+            layers.push({ input: badgePath, top: 800, left: 50 });
+          } else {
+            logger.warn('Badge asset not found', { badge: data.badge, badgePath });
+          }
         }
       }
 
       // Medals (medallions)
       if (data.medallions && data.medallions.length > 0) {
-        const medalConfig = { x: 50, y: 250, spacing: 5, maxColumns: 8 };
-        logger.info('Adding medallion layers', { medallions: data.medallions });
-        data.medallions.forEach((medal, idx) => {
-          const medalAssetId = mapAssetId(medal);
-          const medalPath = asset('medallions', medalAssetId);
-          if (fs.existsSync(medalPath)) {
-            const col = idx % medalConfig.maxColumns;
-            const row = Math.floor(idx / medalConfig.maxColumns);
-            const x = medalConfig.x + col * (40 + medalConfig.spacing);
-            const y = medalConfig.y + row * (40 + medalConfig.spacing);
+        const medallionAssets = await getAssetsInfo('milpac_medallions', data.medallions);
+        medallionAssets.forEach((medalAsset: any, idx: number) => {
+          if (medalAsset && medalAsset.assetFile) {
+            const medalPath = asset('medallions', medalAsset.assetFile);
+            const col = idx % 8;
+            const row = Math.floor(idx / 8);
+            const x = 50 + col * 45;
+            const y = 250 + row * 45;
             layers.push({ input: medalPath, top: y, left: x });
-            logger.debug('Added medallion layer', { medal, medalAssetId, medalPath, x, y });
-          } else {
-            logger.warn('Medallion asset not found', { medal, medalAssetId, medalPath });
+            logger.debug('Added medallion layer', { medal: medalAsset._id, medalPath, x, y });
           }
         });
       }
 
       // Citations (ribbons)
       if (data.citations && data.citations.length > 0) {
-        const citationConfig = { x: 50, y: 550, spacing: 5, maxColumns: 8 };
-        logger.info('Adding citation layers', { citations: data.citations });
-        data.citations.forEach((citation, idx) => {
-          const citationAssetId = mapAssetId(citation);
-          const citationPath = asset('ribbons', citationAssetId);
-          if (fs.existsSync(citationPath)) {
-            const col = idx % citationConfig.maxColumns;
-            const row = Math.floor(idx / citationConfig.maxColumns);
-            const x = citationConfig.x + col * (40 + citationConfig.spacing);
-            const y = citationConfig.y + row * (40 + citationConfig.spacing);
+        const citationAssets = await getAssetsInfo('milpac_citations', data.citations);
+        citationAssets.forEach((citationAsset: any, idx: number) => {
+          if (citationAsset && citationAsset.assetFile) {
+            const citationPath = asset('ribbons', citationAsset.assetFile);
+            const col = idx % 8;
+            const row = Math.floor(idx / 8);
+            const x = 50 + col * 45;
+            const y = 550 + row * 25;
             layers.push({ input: citationPath, top: y, left: x });
-            logger.debug('Added citation layer', { citation, citationAssetId, citationPath, x, y });
-          } else {
-            logger.warn('Citation asset not found', { citation, citationAssetId, citationPath });
+            logger.debug('Added citation layer', { citation: citationAsset._id, citationPath, x, y });
           }
         });
       }
 
       // Rifleman Badge (corps-badges)
       if (data.RifleManBadge) {
-        const rifleAssetId = mapAssetId(data.RifleManBadge);
-        const riflePath = asset('corps-badges', rifleAssetId);
-        logger.info('Adding rifleman badge layer', { RifleManBadge: data.RifleManBadge, rifleAssetId, riflePath });
-        if (fs.existsSync(riflePath)) {
-          layers.push({ input: riflePath, top: 900, left: 50 });
-        } else {
-          logger.warn('Rifleman badge asset not found', { RifleManBadge: data.RifleManBadge, rifleAssetId, riflePath });
+        const rifleAsset = await getAssetInfo('milpac_badges', data.RifleManBadge);
+        if (rifleAsset && rifleAsset.assetFile) {
+          const riflePath = asset('corps-badges', rifleAsset.assetFile);
+          logger.info('Adding rifleman badge layer', { RifleManBadge: data.RifleManBadge, riflePath });
+          if (fs.existsSync(riflePath)) {
+            layers.push({ input: riflePath, top: 900, left: 50 });
+          } else {
+            logger.warn('Rifleman badge asset not found', { RifleManBadge: data.RifleManBadge, riflePath });
+          }
         }
       }
 
       // Training Medals
       if (data.TrainingMedals && data.TrainingMedals.length > 0) {
-        logger.info('Adding training medal layers', { TrainingMedals: data.TrainingMedals });
-        data.TrainingMedals.forEach((medal, idx) => {
-          const trainAssetId = mapAssetId(medal);
-          const trainPath = asset('training', trainAssetId);
-          if (fs.existsSync(trainPath)) {
+        const trainingAssets = await getAssetsInfo('milpac_training_medals', data.TrainingMedals);
+        trainingAssets.forEach((medalAsset: any, idx: number) => {
+          if (medalAsset && medalAsset.assetFile) {
+            const trainPath = asset('training', medalAsset.assetFile);
             layers.push({ input: trainPath, top: 950, left: 50 + idx * 50 });
-            logger.debug('Added training medal layer', { medal, trainAssetId, trainPath, idx });
-          } else {
-            logger.warn('Training medal asset not found', { medal, trainAssetId, trainPath });
+            logger.debug('Added training medal layer', { medal: medalAsset._id, trainPath, idx });
           }
         });
       }
 
-      // Uniform collar (use getCollarAsset from config)
+      // Uniform/collar logic would also be DB-driven (not shown here)
       let unitString = '';
-      if ('unit' in data && typeof (data as any).unit === 'string') {
-        unitString = (data as any).unit;
-      } else if (data.Uniform && typeof data.Uniform === 'string') {
-        unitString = data.Uniform;
-      } else if (data.badge && typeof data.badge === 'string') {
+      if (data.badge && typeof data.badge === 'string' && data.badge.trim() !== '') {
         unitString = data.badge;
+      } else if (data.Uniform && typeof data.Uniform === 'string' && data.Uniform.trim() !== '') {
+        unitString = data.Uniform;
       }
       const { getCollarAsset, getUniformAsset } = require('../config');
       const collarAsset = getCollarAsset(unitString);

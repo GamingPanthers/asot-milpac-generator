@@ -5,13 +5,13 @@ export interface MemberData {
   name: string;
   memberID: string;
   discordID: string;
-  rank: string;
-  Uniform: string;
-  badge: string;
-  medallions: string[];
-  citations: string[];
-  TrainingMedals: string[];
-  RifleManBadge: string;
+  rank: string; // references milpac_ranks _id
+  badge: string; // references milpac_badges _id
+  medallions: string[]; // references milpac_medallions _id
+  citations: string[]; // references milpac_citations _id
+  TrainingMedals: string[]; // references milpac_training_medals _id
+  RifleManBadge: string; // references milpac_badges _id
+  Uniform?: string; // optional, for fallback
 }
 
 /**
@@ -130,3 +130,10 @@ export interface ApiResponse<T = any> {
 
 // Re-export MILPAC types
 export type { MilpacData, Rank } from './milpac';
+
+export interface MilpacAsset {
+  _id: string;
+  displayName: string;
+  assetFile: string;
+  aliases?: string[];
+}

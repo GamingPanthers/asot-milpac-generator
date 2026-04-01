@@ -1,17 +1,6 @@
-// List of valid corps for reference and logic
-export const CORPS = [
-  'Infantry Corp',
-  'Engineers Corp',
-  'Artillery Corp',
-  'Armour Corp',
-  'Army Aviation Corp',
-  'Medical Corp',
-  'Zeus Corp',
-];
-
 import dotenv from 'dotenv';
 import path from 'path';
-import { milpacFieldMap } from './milpacFieldMap';
+import { getAssetInfo } from '../lib/mongo';
 
 dotenv.config();
 
@@ -47,29 +36,24 @@ const config = {
   API_TIMEOUT: parseInt(process.env.API_TIMEOUT || '30000', 10),
 };
 
-
 /**
  * Returns the correct collar asset for a given corps name (case-insensitive, trimmed).
  * @param unitOrCorps The corps name (any case, extra spaces allowed)
  */
-function getCollarAsset(unitOrCorps: string): string {
+export async function getCollarAsset(unitOrCorps: string): Promise<string> {
   if (!unitOrCorps) return 'brown_collar';
-  const normalized = unitOrCorps.trim().toLowerCase();
-  if (normalized === 'army aviation corp'.toLowerCase()) return 'blue_collar';
-  // Add more custom logic for other corps if needed
-  return 'brown_collar';
+  const asset = await getAssetInfo('milpac_corps', unitOrCorps);
+  return asset && asset.collarFile ? asset.collarFile : 'brown_collar';
 }
 
 /**
  * Returns the correct uniform asset for a given corps name (case-insensitive, trimmed).
  * @param unitOrCorps The corps name (any case, extra spaces allowed)
  */
-function getUniformAsset(unitOrCorps: string): string {
+export async function getUniformAsset(unitOrCorps: string): Promise<string> {
   if (!unitOrCorps) return 'brown_uniform';
-  const normalized = unitOrCorps.trim().toLowerCase();
-  if (normalized === 'army aviation corp'.toLowerCase()) return 'blue_uniform';
-  // Add more custom logic for other corps if needed
-  return 'brown_uniform';
+  const asset = await getAssetInfo('milpac_corps', unitOrCorps);
+  return asset && asset.uniformFile ? asset.uniformFile : 'brown_uniform';
 }
 
 function validateConfig(): void {
@@ -82,4 +66,4 @@ function validateConfig(): void {
   }
 }
 
-export { config, validateConfig, milpacFieldMap, getCollarAsset, getUniformAsset };
+export { config, validateConfig };
