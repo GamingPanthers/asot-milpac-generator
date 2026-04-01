@@ -1,12 +1,21 @@
+// List of valid corps for reference and logic
+export const CORPS = [
+  'Infantry Corp',
+  'Engineers Corp',
+  'Artillery Corp',
+  'Armour Corp',
+  'Army Aviation Corp',
+  'Medical Corp',
+  'Zeus Corp',
+];
+
 import dotenv from 'dotenv';
 import path from 'path';
+import { milpacFieldMap } from './milpacFieldMap';
 
 dotenv.config();
 
-/**
- * Environment configuration
- */
-export const config = {
+const config = {
   // Server
   PORT: parseInt(process.env.PORT || '42070', 10),
   NODE_ENV: process.env.NODE_ENV || 'development',
@@ -38,17 +47,39 @@ export const config = {
   API_TIMEOUT: parseInt(process.env.API_TIMEOUT || '30000', 10),
 };
 
-/**
- * Validate required configuration
- */
-export function validateConfig(): void {
-  const required = ['WEBHOOK_API_KEY', 'MONGO_URL', 'REDIS_URL'];
 
+/**
+ * Returns the correct collar asset for a given corps name (case-insensitive, trimmed).
+ * @param unitOrCorps The corps name (any case, extra spaces allowed)
+ */
+function getCollarAsset(unitOrCorps: string): string {
+  if (!unitOrCorps) return 'brown_collar';
+  const normalized = unitOrCorps.trim().toLowerCase();
+  if (normalized === 'army aviation corp'.toLowerCase()) return 'blue_collar';
+  // Add more custom logic for other corps if needed
+  return 'brown_collar';
+}
+
+/**
+ * Returns the correct uniform asset for a given corps name (case-insensitive, trimmed).
+ * @param unitOrCorps The corps name (any case, extra spaces allowed)
+ */
+function getUniformAsset(unitOrCorps: string): string {
+  if (!unitOrCorps) return 'brown_uniform';
+  const normalized = unitOrCorps.trim().toLowerCase();
+  if (normalized === 'army aviation corp'.toLowerCase()) return 'blue_uniform';
+  // Add more custom logic for other corps if needed
+  return 'brown_uniform';
+}
+
+function validateConfig(): void {
+  const required = ['WEBHOOK_API_KEY', 'MONGO_URL', 'REDIS_URL'];
   if (config.NODE_ENV === 'production') {
     const missing = required.filter((key) => !process.env[key]);
-
     if (missing.length > 0) {
       throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
     }
   }
 }
+
+export { config, validateConfig, milpacFieldMap, getCollarAsset, getUniformAsset };
