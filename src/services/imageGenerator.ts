@@ -1,4 +1,3 @@
-// @ts-ignore
 import { PNG } from 'pngjs';
 import { MemberData } from '../types';
 import { config } from '../config';
@@ -7,6 +6,7 @@ import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
 import { getAssetInfo, getAssetsInfo } from '../lib/mongo';
+import { createCanvas, loadImage, registerFont } from 'canvas';
 
 /**
  * Military uniform image generator using pngjs
@@ -42,6 +42,46 @@ export class ImageGeneratorService {
 
       // Compose layers
       const layers: sharp.OverlayOptions[] = [];
+
+      // --- Name on Badge (Composite overlay) ---
+      if (
+        data.name && typeof data.name === 'string' && data.name.trim() !== '' &&
+        data.badge
+      ) {
+        logger.info('Preparing to add name to badge', { name: data.name, badge: data.badge });
+        const badgeAsset = await getAssetInfo('milpac_badges', data.badge);
+        if (badgeAsset && badgeAsset.assetFile) {
+          const badgePath = asset('corps-badges', badgeAsset.assetFile);
+          if (fs.existsSync(badgePath)) {
+            logger.info('Badge asset found for name overlay', { badgePath });
+            // Load badge image into canvas
+            const badgeImg = await loadImage(badgePath);
+            const tagWidth = badgeImg.width;
+            const tagHeight = badgeImg.height;
+            const fontSize = Math.floor(tagHeight * 0.5);
+            const canvas = createCanvas(tagWidth, tagHeight);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(badgeImg, 0, 0, tagWidth, tagHeight);
+            // Draw name text centered on badge
+            const nameText = data.name.trim().toUpperCase();
+            ctx.font = `bold ${fontSize}px 'Open Sans'`;
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'black';
+            ctx.shadowBlur = 4;
+            ctx.fillText(nameText, tagWidth / 2, tagHeight / 2);
+            logger.info('Drew name text on badge', { name: nameText, fontSize, tagWidth, tagHeight });
+            // Composite badge+name at badge position
+            layers.push({ input: canvas.toBuffer('image/png'), top: 800, left: 50 });
+            logger.info('Added name text to badge layer', { name: nameText, badgePath, top: 800, left: 50 });
+          } else {
+            logger.warn('Badge asset file does not exist for name overlay', { badgePath });
+          }
+        } else {
+          logger.warn('Badge asset not found in DB for name overlay', { badge: data.badge });
+        }
+      }
 
       // Rank
       if (data.rank) {
@@ -137,8 +177,8 @@ export class ImageGeneratorService {
         unitString = data.Uniform;
       }
       const { getCollarAsset, getUniformAsset } = require('../config');
-      const collarAsset = getCollarAsset(unitString);
-      const uniformAsset = getUniformAsset(unitString);
+      const uniformAsset = await getUniformAsset(unitString);
+      const collarAsset = await getCollarAsset(unitString);
       const uniformPath = asset('uniform', uniformAsset);
       if (fs.existsSync(uniformPath)) {
         layers.unshift({ input: uniformPath, top: 0, left: 0 });

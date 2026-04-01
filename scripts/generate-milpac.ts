@@ -1,9 +1,11 @@
+
 import path from 'path';
 import fs from 'fs';
 import mongoose from 'mongoose';
 import { Member } from '../src/models';
 import { ImageGeneratorService } from '../src/services/imageGenerator';
 import { config } from '../src/config';
+import { closeDb } from '../src/lib/mongo';
 
 async function main() {
   const memberID = process.argv[2];
@@ -16,6 +18,8 @@ async function main() {
   const member = await Member.findOne({ memberID });
   if (!member) {
     console.error('No member found with memberID:', memberID);
+    await mongoose.disconnect();
+    await closeDb();
     process.exit(1);
   }
 
@@ -25,6 +29,7 @@ async function main() {
   fs.writeFileSync(outPath, buffer);
   console.log('Generated image at:', outPath);
   await mongoose.disconnect();
+  await closeDb();
 }
 
 main().catch(err => {

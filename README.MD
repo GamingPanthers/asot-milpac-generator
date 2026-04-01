@@ -1,33 +1,19 @@
-# 🎖️ Milpac Image Generator
+curl http://localhost:42070/webhook
+tail -f logs/milpac.log
+# 🎖️ ASOT Milpac Image Generator
 
-Automatic military personnel uniform image generation system triggered by webhooks.
-
-**Generate professional military uniform images in milliseconds when member data changes.**
-
----
-
-## 🎯 What This Does
-
-When a soldier gets promoted or earns a medal, their uniform image is **automatically regenerated** with:
-
-- ✅ New rank insignia
-- ✅ Updated medals & citations  
-- ✅ Correct uniform color & badges
-- ✅ Professional Canvas rendering (1398×1000px PNG)
-
-All triggered by a simple webhook from your database API.
+A robust, automated system for generating professional military personnel uniform images based on live data from MongoDB. When a member’s rank, medals, or qualifications change, a new uniform image is instantly rendered and saved—no manual work required.
 
 ---
 
-## 📚 Documentation
+## ✨ Features
 
-| Document | Purpose |
-|----------|---------|
-| **[SETUP.md](SETUP.md)** | ⚡ Get running in 5 minutes |
-| **[PROJECT.md](PROJECT.md)** | 📖 Complete documentation (setup, API, config) |
-| **[ARCHITECTURE.md](ARCHITECTURE.md)** | 🏗️ System design & webhooks |
-
-**Start here:** [SETUP.md](SETUP.md) for quick start
+- 🔄 **Fully database-driven** asset lookups (no static mapping)
+- ⚡ **Webhook-triggered, event-driven** image generation
+- 🏅 **Accurate overlays** for rank, medals, badges, and name badge
+- 🖼️ **High-quality PNG output** (1398×1000px) using node-canvas and sharp
+- 🛡️ **TypeScript, Express, MongoDB, Redis, BullMQ, and Docker** support
+- 📋 **Detailed logging** and robust error handling
 
 ---
 
@@ -94,60 +80,6 @@ Save PNG + Update DB
 ✅ Complete
 ```
 
-**Key Features:**
-
-- 🔄 **Webhook-driven** — No manual triggers needed
-- ⏱️ **Fast** — Selective field change detection (skip if no rank/medal changes)
-- 🔁 **Reliable** — Job queue with exponential backoff retry
-- 📦 **Scalable** — Supports single records and batch operations
-- 🎨 **Configurable** — Object-based placement system (not hard-coded pixels)
-- ✅ **Type-safe** — Full TypeScript support
-
----
-
-## 📡 Webhook Endpoint
-
-### `POST /webhook`
-
-**Headers:**
-```
-Authorization: Bearer {WEBHOOK_API_KEY}
-Content-Type: application/json
-```
-
-**Request:**
-```json
-{
-  "event": "member.updated",
-  "member": {
-    "name": "John Smith",
-    "memberID": "12345",
-    "discordID": "987654321",
-    "changeFields": ["rank", "medals"],
-    "data": {
-      "rank": "SGT",
-      "Uniform": "Blue",
-      "badge": "Infantry",
-      "medallions": ["Bronze1"],
-      "citations": ["campaign", "gallantry"],
-      "TrainingMedals": ["ExpR"],
-      "RifleManBadge": "PTE"
-    }
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "status": "queued",
-  "jobId": "job_1a2b3c4d",
-  "message": "Image generation queued for MemberID 12345"
-}
-```
-
-Full API docs → [PROJECT.md](PROJECT.md#-api-documentation)
-
 ---
 
 ## 🛠️ Tech Stack
@@ -156,33 +88,28 @@ Full API docs → [PROJECT.md](PROJECT.md#-api-documentation)
 - **Express.js** — Web framework
 - **TypeScript** — Type safety
 - **Canvas** — Image rendering
+- **Sharp** — Image compositing
 - **BullMQ** — Job queue (Redis-backed)
 - **MongoDB** — Data persistence
 - **Redis** — Job storage
+- **Docker** — Containerization
 
 ---
 
 ## ⚙️ Configuration
 
-**Key environment variables:**
+Key environment variables:
 
 ```env
-# Webhook security
 WEBHOOK_API_KEY=your_secure_key_here
-
-# Databases
 MONGO_URL=mongodb://localhost:27017/milpac
 REDIS_URL=redis://localhost:6379
-
-# Image output
 IMAGE_OUTPUT_DIR=./milpac
-
-# Job queue
 MAX_RETRIES=5
 JOB_TIMEOUT_MS=30000
 ```
 
-See [.env.example](.env.example) for all options.
+See `.env.example` for all options.
 
 ---
 
@@ -209,34 +136,52 @@ medals.json                   # Medal/citation mappings
 
 ---
 
-## 🚀 Deployment
+## 📡 Webhook Endpoint
 
-### Docker
+### `POST /webhook`
 
-```bash
-docker build -t milpac-generator .
-docker run -d -p 42070:42070 \
-  -e WEBHOOK_API_KEY=your_key \
-  -e MONGO_URL=mongodb://... \
-  -e REDIS_URL=redis://... \
-  milpac-generator
+**Headers:**
+```
+Authorization: Bearer {WEBHOOK_API_KEY}
+Content-Type: application/json
 ```
 
-### Docker Compose
-
-```bash
-docker-compose up -d
+**Request Example:**
+```json
+{
+  "event": "member.updated",
+  "member": {
+    "name": "John Smith",
+    "memberID": "12345",
+    "discordID": "987654321",
+    "changeFields": ["rank", "medals"],
+    "data": {
+      "rank": "SGT",
+      "Uniform": "Blue",
+      "badge": "Infantry",
+      "medallions": ["Bronze1"],
+      "citations": ["campaign", "gallantry"],
+      "TrainingMedals": ["ExpR"],
+      "RifleManBadge": "PTE"
+    }
+  }
+}
 ```
 
-See [PROJECT.md](PROJECT.md#-deployment) for full deployment guide.
+**Response Example:**
+```json
+{
+  "status": "queued",
+  "jobId": "job_1a2b3c4d",
+  "message": "Image generation queued for MemberID 12345"
+}
+```
 
 ---
 
 ## 📊 What Gets Updated
 
-When a webhook is received, the system checks these fields:
-
-**Regenerates image if changed:**
+Regenerates image if changed:
 - `rank` — Military rank
 - `Uniform` — Uniform color (Blue/Brown)
 - `badge` — Corps badge
@@ -245,45 +190,24 @@ When a webhook is received, the system checks these fields:
 - `TrainingMedals` — Training badges
 - `RifleManBadge` — Marksmanship badge
 
-**Ignores (no regen):**
-- `name` — Metadata only
-- `discordID` — Metadata only
-- `memberID` — Metadata only
-- Other non-visual fields
-
-This keeps generation **fast** by skipping unnecessary work.
+Ignores (no regen):
+- `name`, `discordID`, `memberID`, and other non-visual fields
 
 ---
 
 ## 🐛 Troubleshooting
 
-Common issues? See [Troubleshooting section in PROJECT.md](PROJECT.md#-troubleshooting)
-
-**Quick checks:**
-
-```bash
-# Is MongoDB running?
-mongosh
-
-# Is Redis running?
-redis-cli ping
-
-# Is server running?
-curl http://localhost:42070/webhook
-
-# Check logs
-tail -f logs/milpac.log
-```
+See [PROJECT.md](PROJECT.md#-troubleshooting) for common issues and solutions.
 
 ---
 
 ## 💡 Use Cases
 
-✅ **Automatic Rank Promotions** — Update uniform when soldier is promoted  
-✅ **Medal Awards** — Regenerate image when earning decorations  
-✅ **Batch Updates** — Process multiple members in one webhook  
-✅ **Webhook History** — Track all generation events in MongoDB  
-✅ **Retry on Failure** — Automatic retry with exponential backoff  
+- Automatic rank promotions
+- Medal awards
+- Batch updates
+- Webhook history
+- Retry on failure
 
 ---
 
@@ -306,16 +230,6 @@ tail -f logs/milpac.log
    ↓
 6. Return Status
 ```
-
----
-
-## 📖 Next Steps
-
-1. **New to the project?** → Start with [SETUP.md](SETUP.md)
-2. **Want full docs?** → Read [PROJECT.md](PROJECT.md)
-3. **Understanding architecture?** → See [ARCHITECTURE.md](ARCHITECTURE.md)
-4. **Deploying?** → Check deployment section in [PROJECT.md](PROJECT.md#-deployment)
-5. **Customizing placement?** → Edit [src/placement/placement.config.ts](src/placement/placement.config.ts)
 
 ---
 
@@ -368,7 +282,7 @@ Found a bug? Have a feature idea?
 
 ---
 
-**Last Updated:** March 30, 2026  
+**Last Updated:** April 1, 2026  
 **Version:** 1.0.0  
 **Status:** Production Ready ✅
 
