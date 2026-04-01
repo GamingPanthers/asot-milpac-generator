@@ -1,23 +1,55 @@
 curl http://localhost:42070/webhook
 tail -f logs/milpac.log
-# 🎖️ ASOT Milpac Image Generator
+
+<p align="center">
+  <img src="https://em-content.zobj.net/source/microsoft-teams/363/military-medal_1f396-fe0f.png" width="80" alt="Military Medal"/>
+</p>
+
+<h1 align="center">ASOT Milpac Image Generator</h1>
+
+<p align="center"><b>Automated, military-precision uniform image generation for personnel records</b></p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/status-Production%20Ready-brightgreen?style=flat-square&logo=codeforces"/>
+  <img src="https://img.shields.io/badge/version-1.0.0-blue?style=flat-square&logo=typescript"/>
+  <img src="https://img.shields.io/badge/last%20updated-April%202026-lightgrey?style=flat-square&logo=github"/>
+</p>
+
+---
+
+<p align="center">
+  <img src="https://img.icons8.com/ios-filled/100/4a90e2/military-helmet.png" width="60" alt="Helmet"/>
+</p>
+
+<p align="center">
+<b>"No soldier left behind—every promotion, every medal, every detail, instantly reflected in their digital uniform."</b>
+</p>
+
+---
+
+# 🪖 Mission Brief
 
 A robust, automated system for generating professional military personnel uniform images based on live data from MongoDB. When a member’s rank, medals, or qualifications change, a new uniform image is instantly rendered and saved—no manual work required.
 
 ---
 
-## ✨ Features
 
-- 🔄 **Fully database-driven** asset lookups (no static mapping)
-- ⚡ **Webhook-triggered, event-driven** image generation
-- 🏅 **Accurate overlays** for rank, medals, badges, and name badge
-- 🖼️ **High-quality PNG output** (1398×1000px) using node-canvas and sharp
-- 🛡️ **TypeScript, Express, MongoDB, Redis, BullMQ, and Docker** support
-- 📋 **Detailed logging** and robust error handling
+## 🏅 Features
+
+
+<ul>
+  <li>🎯 <b>Fully database-driven</b> asset lookups (no static mapping)</li>
+  <li>🚨 <b>Webhook-triggered, event-driven</b> image generation</li>
+  <li>🎖️ <b>Accurate overlays</b> for rank, medals, badges, and name badge</li>
+  <li>🖼️ <b>High-quality PNG output</b> (1398×1000px) using node-canvas and sharp</li>
+  <li>🛡️ <b>TypeScript, Express, MongoDB, Redis, BullMQ, and Docker</b> support</li>
+  <li>📋 <b>Detailed logging</b> and robust error handling</li>
+</ul>
 
 ---
 
-## 🚀 Quick Start
+
+## 🚀 Quick Deployment
 
 ```bash
 # 1. Install dependencies
@@ -60,7 +92,8 @@ Generated image will be saved to `./milpac/12345.png` ✨
 
 ---
 
-## 🏗️ Architecture
+
+## 🏗️ Command Structure
 
 ```
 Koda Database API
@@ -82,7 +115,8 @@ Save PNG + Update DB
 
 ---
 
-## 🛠️ Tech Stack
+
+## 🛠️ Arsenal
 
 - **Node.js 18+** — JavaScript runtime
 - **Express.js** — Web framework
@@ -96,7 +130,8 @@ Save PNG + Update DB
 
 ---
 
-## ⚙️ Configuration
+
+## ⚙️ Field Manual
 
 Key environment variables:
 
@@ -113,7 +148,8 @@ See `.env.example` for all options.
 
 ---
 
-## 📁 Project Structure
+
+## 📁 Barracks Layout
 
 ```
 src/
@@ -136,7 +172,8 @@ medals.json                   # Medal/citation mappings
 
 ---
 
-## 📡 Webhook Endpoint
+
+## 📡 Orders Inbound (Webhook)
 
 ### `POST /webhook`
 
@@ -179,7 +216,8 @@ Content-Type: application/json
 
 ---
 
-## 📊 What Gets Updated
+
+## 📊 What Triggers a Uniform Change?
 
 Regenerates image if changed:
 - `rank` — Military rank
@@ -195,13 +233,15 @@ Ignores (no regen):
 
 ---
 
-## 🐛 Troubleshooting
+
+## 🐛 Field Diagnostics
 
 See [PROJECT.md](PROJECT.md#-troubleshooting) for common issues and solutions.
 
 ---
 
-## 💡 Use Cases
+
+## 💡 Tactical Scenarios
 
 - Automatic rank promotions
 - Medal awards
@@ -211,7 +251,8 @@ See [PROJECT.md](PROJECT.md#-troubleshooting) for common issues and solutions.
 
 ---
 
-## 🔄 Lifecycle
+
+## 🔄 Operation Flow
 
 ```
 1. Webhook Received
@@ -233,7 +274,8 @@ See [PROJECT.md](PROJECT.md#-troubleshooting) for common issues and solutions.
 
 ---
 
-## 📋 Requirements
+
+## 📋 Minimum Enlistment Requirements
 
 - Node.js 18.0.0+
 - MongoDB 5.0+
@@ -242,7 +284,8 @@ See [PROJECT.md](PROJECT.md#-troubleshooting) for common issues and solutions.
 
 ---
 
-## 🔐 Security
+
+## 🔐 Security Protocols
 
 - API key validation on all webhooks
 - Optional HMAC-SHA256 signature verification
@@ -251,11 +294,13 @@ See [PROJECT.md](PROJECT.md#-troubleshooting) for common issues and solutions.
 
 ---
 
+
 ## 📝 License
 
 ISC
 
 ---
+
 
 ## 🤝 Contributing
 
@@ -267,6 +312,7 @@ Found a bug? Have a feature idea?
 
 ---
 
+
 ## 📞 Support
 
 - 📖 Read [PROJECT.md](PROJECT.md) for detailed docs
@@ -276,7 +322,8 @@ Found a bug? Have a feature idea?
 
 ---
 
-## 🎉 Ready to Start?
+
+## 🎉 Ready to Deploy?
 
 **[→ Go to SETUP.md](SETUP.md) to get running in 5 minutes**
 
