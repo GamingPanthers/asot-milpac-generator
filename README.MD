@@ -131,44 +131,20 @@ Save PNG + Update DB
 ---
 
 
+
 ## ⚙️ Field Manual
 
-Key environment variables:
-
-```env
-WEBHOOK_API_KEY=your_secure_key_here
-MONGO_URL=mongodb://localhost:27017/milpac
-REDIS_URL=redis://localhost:6379
-IMAGE_OUTPUT_DIR=./milpac
-MAX_RETRIES=5
-JOB_TIMEOUT_MS=30000
-```
-
-See `.env.example` for all options.
+See [CONFIGURATION.md](CONFIGURATION.md) for all environment variables and configuration options.
 
 ---
 
 
+
 ## 📁 Barracks Layout
 
-```
-src/
-├── server.ts                 # Express app & webhook endpoint
-├── services/                 # Business logic
-│   ├── webhook.service.ts
-│   ├── change-detector.service.ts
-│   ├── image-generator.service.ts
-│   ├── queue.service.ts
-│   └── storage.service.ts
-├── placement/                # Object-based positioning
-│   └── placement.config.ts
-├── handlers/                 # Route handlers
-├── models/                   # Data schemas
-└── utility/                  # Helpers
+See [DATABASE_ID_NAMES.md](DATABASE_ID_NAMES.md) for all MongoDB collection names and ID conventions.
 
-milpac/                       # Generated PNG images
-medals.json                   # Medal/citation mappings
-```
+Project structure and file layout are described in [PROJECT.md](PROJECT.md).
 
 ---
 
