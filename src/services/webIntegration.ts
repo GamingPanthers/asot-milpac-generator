@@ -1,5 +1,4 @@
 import logger from '../utils/logger';
-import { config } from '../config';
 
 /**
  * Service to notify milpac-web of completed image generation
@@ -9,7 +8,7 @@ export class WebIntegrationService {
 
   /**
    * Notify milpac-web of completed image generation
-   * Uses webhook authentication similar to incoming requests
+   * Updates member record with image path after successful generation
    */
   static async notifyImageGeneration(
     memberID: string,
@@ -27,24 +26,27 @@ export class WebIntegrationService {
       }
 
       const webUrl = process.env.MILPAC_WEB_URL || 'http://localhost:3000';
+      const apiKey = process.env.GENERATOR_API_KEY;
 
-      // Use webhook API key for authentication (same as incoming webhook)
-      const authHeader = `Bearer ${config.WEBHOOK_API_KEY}`;
+      // Check if API key is configured
+      if (!apiKey) {
+        logger.warn('GENERATOR_API_KEY not configured - skipping web notification', { memberID });
+        return false;
+      }
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
 
       try {
-        const response = await fetch(`${webUrl}/api/milpac/${memberID}/image-generated`, {
+        const response = await fetch(`${webUrl}/api/generator/image-update`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': authHeader,
+            'x-api-key': apiKey,
           },
           body: JSON.stringify({
             memberID,
-            imageUrl,
-            timestamp: new Date().toISOString(),
+            imagePath: imageUrl,
           }),
           signal: controller.signal,
         });
