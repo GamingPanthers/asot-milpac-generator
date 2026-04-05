@@ -98,8 +98,9 @@ export class WebhookHandler {
 
       const { member } = payload;
       const { memberID, name, discordID, changeFields = [], data } = member;
+      const forceGenerate = payload.forceGenerate || false;
 
-      logger.info('Webhook received', { memberID, event: payload.event, changeFieldsCount: changeFields.length });
+      logger.info('Webhook received', { memberID, event: payload.event, changeFieldsCount: changeFields.length, forceGenerate });
 
       // Get existing member data
       const existingMember = await memberService.getMember(memberID);
@@ -108,7 +109,7 @@ export class WebhookHandler {
       // Detect changes (use empty array if changeFields not provided)
       const hasChanges = memberService.detectChanges(oldData, data, changeFields);
 
-      if (!hasChanges && existingMember) {
+      if (!hasChanges && existingMember && !forceGenerate) {
         logger.info('No relevant changes detected', { memberID });
         res.status(200).json({
           status: 'success',

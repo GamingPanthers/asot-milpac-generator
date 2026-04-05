@@ -31,6 +31,7 @@ export interface MemberData {
  */
 export interface WebhookPayload {
   event: 'member.updated' | 'certificate.requested' | string;
+  forceGenerate?: boolean;
   member: {
     memberID: string;
     name: string;

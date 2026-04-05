@@ -65,26 +65,6 @@ export class ImageGeneratorService {
       // Compose layers
       const layers: sharp.OverlayOptions[] = [];
 
-      // Base canvas
-      const width = config.IMAGE_WIDTH;
-      const height = config.IMAGE_HEIGHT;
-      logger.debug('Canvas dimensions', { width, height });
-      const base = sharp({
-        create: {
-          width,
-          height,
-          channels: 4,
-          background: { r: 255, g: 255, b: 255, alpha: 1 },
-        },
-      });
-
-      // Helper to resolve asset path
-      const asset = (folder: string, name: string) =>
-        path.join(__dirname, '../../images', folder, `${name}.png`);
-
-      // Compose layers
-      const layers: sharp.OverlayOptions[] = [];
-
       // --- Base Uniform Layer ---
       const uniformAsset = data.corps && data.corps.length > 0 ? data.corps : 'default';
       const uniformPath = asset('uniform', uniformAsset);

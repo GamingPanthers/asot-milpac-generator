@@ -28,9 +28,12 @@ export class StorageService {
   }
 
   /**
-   * Save image to disk
+   * Save image to disk in specified folder
+   * @param memberID - The member ID
+   * @param imageBuffer - The image buffer to save
+   * @param folder - The subfolder to save to (default: 'uniform')
    */
-  async saveImage(memberID: string, imageBuffer: Buffer): Promise<string> {
+  async saveImage(memberID: string, imageBuffer: Buffer, folder: string = 'uniform'): Promise<string> {
     try {
       // Validate input
       if (!memberID || typeof memberID !== 'string') {
@@ -45,12 +48,19 @@ export class StorageService {
         this.ensureOutputDirectory();
       }
 
+      // Create folder-specific subdirectory
+      const folderPath = path.join(config.IMAGE_OUTPUT_DIR, folder);
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+        logger.info('Image subfolder created', { folder, path: folderPath });
+      }
+
       const filename = `${memberID}.png`;
-      const filepath = path.join(config.IMAGE_OUTPUT_DIR, filename);
+      const filepath = path.join(folderPath, filename);
 
       // Write file asynchronously
       await fs.promises.writeFile(filepath, imageBuffer);
-      logger.info('Image saved', { memberID, filepath, size: imageBuffer.length });
+      logger.info('Image saved', { memberID, folder, filepath, size: imageBuffer.length });
 
       return filepath;
     } catch (error) {
@@ -61,23 +71,26 @@ export class StorageService {
 
   /**
    * Delete image from disk
+   * @param memberID - The member ID
+   * @param folder - The subfolder where image is stored (default: 'uniform')
    */
-  async deleteImage(memberID: string): Promise<boolean> {
+  async deleteImage(memberID: string, folder: string = 'uniform'): Promise<boolean> {
     try {
       if (!memberID || typeof memberID !== 'string') {
         logger.warn('Invalid memberID for deletion', { memberID });
         return false;
       }
 
-      const filepath = path.join(config.IMAGE_OUTPUT_DIR, `${memberID}.png`);
+      const folderPath = path.join(config.IMAGE_OUTPUT_DIR, folder);
+      const filepath = path.join(folderPath, `${memberID}.png`);
 
       if (fs.existsSync(filepath)) {
         await fs.promises.unlink(filepath);
-        logger.info('Image deleted', { memberID, filepath });
+        logger.info('Image deleted', { memberID, folder, filepath });
         return true;
       }
 
-      logger.debug('Image not found for deletion', { memberID, filepath });
+      logger.debug('Image not found for deletion', { memberID, folder, filepath });
       return false;
     } catch (error) {
       logger.error('Failed to delete image', { memberID, error: error instanceof Error ? error.message : error });

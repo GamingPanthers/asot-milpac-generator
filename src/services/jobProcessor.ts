@@ -17,24 +17,24 @@ export class JobProcessor {
    */
   static async processGenerationJob(job: Job<GenerationJob>): Promise<any> {
     const startTime = Date.now();
-    const { memberID, name, data } = job.data;
+    const { memberID, name, data, jobId } = job.data;
 
     try {
-      logger.info('Processing generation job', { memberID, jobId: job.id });
+      logger.info('Processing generation job', { memberID, jobId });
 
       // Generate image
       const imageBuffer = await imageGeneratorService.generateUniform(memberID, data);
 
-      // Save image to disk
-      const imagePath = await storageService.saveImage(memberID, imageBuffer);
+      // Save image to disk in uniform folder
+      const imagePath = await storageService.saveImage(memberID, imageBuffer, 'uniform');
 
       // Update member record with image metadata
       await memberService.updateMemberImage(memberID, imagePath);
 
       // Notify milpac-web of successful generation (non-blocking)
       try {
-        // Only use filename, not full path
-        const imageUrl = `${config.IMAGE_SERVICE_URL}/milpac/${memberID}.png`;
+        // Only use filename, not full path - point to uniform subfolder
+        const imageUrl = `${config.IMAGE_SERVICE_URL}/milpac/uniform/${memberID}.png`;
         await WebIntegrationService.notifyImageGeneration(memberID, imageUrl);
       } catch (notifyError) {
         // Log but don't fail the job - notification failure shouldn't block success
@@ -45,9 +45,9 @@ export class JobProcessor {
       const executionTime = Date.now() - startTime;
       const imageSize = imageBuffer.length;
 
-      await this.logGeneration({
+      await JobProcessor.logGeneration({
         memberID,
-        jobId: job.id || `job_${memberID}_${Date.now()}`,
+        jobId,
         timestamp: new Date(),
         status: 'success',
         executionTime,
@@ -56,7 +56,7 @@ export class JobProcessor {
 
       logger.info('Generation job completed', {
         memberID,
-        jobId: job.id,
+        jobId,
         executionTime,
         imageSize,
       });
@@ -73,9 +73,9 @@ export class JobProcessor {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
       // Log failed generation
-      await this.logGeneration({
+      await JobProcessor.logGeneration({
         memberID,
-        jobId: job.id || `job_${memberID}_${Date.now()}`,
+        jobId,
         timestamp: new Date(),
         status: 'failed',
         executionTime,
@@ -84,7 +84,7 @@ export class JobProcessor {
 
       logger.error('Generation job failed', {
         memberID,
-        jobId: job.id,
+        jobId,
         error: errorMessage,
         executionTime,
       });
