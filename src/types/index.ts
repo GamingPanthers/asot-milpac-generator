@@ -27,16 +27,33 @@ export interface MemberData {
 
 /**
  * Webhook payload structure from website API
+ * Supports both member.updated and certificate.requested events
  */
 export interface WebhookPayload {
-  event: string;
-  user: {
-    _id: string;
-    id: string;
-    name?: string;
+  event: 'member.updated' | 'certificate.requested' | string;
+  member: {
+    memberID: string;
+    name: string;
+    discordID: string;
     changeFields: string[];
-    data: MemberData;
+    data: MemberData & CertificateData;
   };
+}
+
+/**
+ * Certificate-specific data fields
+ */
+export interface CertificateData {
+  memberID?: string;
+  rank?: string;
+  Uniform?: string;
+  badge?: string;
+  medallions?: string[];
+  citations?: string[];
+  TrainingMedals?: string[];
+  RifleManBadge?: string;
+  certificateType?: 'award' | 'certificate';
+  certificateAward?: string;
 }
 
 /**
@@ -44,9 +61,10 @@ export interface WebhookPayload {
  */
 export interface StoredMember {
   _id?: string;
-  userId: string;
+  memberID: string;
   name: string;
-  data: MemberData;
+  discordID?: string;
+  data: MemberData & CertificateData;
   lastUpdated: Date;
   lastGenerated?: Date;
   imageUrl?: string;
@@ -57,9 +75,9 @@ export interface StoredMember {
  */
 export interface GenerationJob {
   jobId: string;
-  userId: string;
+  memberID: string;
   name: string;
-  data: MemberData;
+  data: MemberData & CertificateData;
   timestamp: Date;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   error?: string;
@@ -71,7 +89,7 @@ export interface GenerationJob {
  */
 export interface GenerationLog {
   _id?: string;
-  userId: string;
+  memberID: string;
   jobId: string;
   timestamp: Date;
   status: 'success' | 'failed';

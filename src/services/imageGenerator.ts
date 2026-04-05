@@ -1,4 +1,4 @@
-import { PNG } from 'pngjs';
+import PNG = require('pngjs');
 import { MemberData } from '../types';
 import { config } from '../config';
 import logger from '../utils/logger';
