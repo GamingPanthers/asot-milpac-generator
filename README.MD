@@ -132,87 +132,62 @@ Save PNG + Update DB
 
 
 
-## ⚙️ Field Manual
+## 📚 Documentation Guide
 
-See [CONFIGURATION.md](CONFIGURATION.md) for all environment variables and configuration options.
+**Not sure where to start? See [DOCUMENTATION_MAP.md](DOCUMENTATION_MAP.md) for a navigation guide by use case.**
+
+We maintain comprehensive documentation organized by use case:
+
+| Document | Purpose | For Whom |
+|----------|---------|----------|
+| [SETUP.md](SETUP.md) | 🚀 **Installation & Deployment** — Local dev, Docker, K8s, production | Getting started, deploying |
+| [PROJECT.md](PROJECT.md) | 📖 **Complete Project Guide** — Folder structure, full API docs, data flows | Understanding the system |
+| [API_REFERENCE.md](API_REFERENCE.md) | 📡 **API Endpoint Reference** — Request/response schemas, curl examples | Building webhooks |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 🏛️ **System Architecture** — Design patterns, performance, scalability | Deep technical knowledge |
+| [CONFIGURATION.md](CONFIGURATION.md) | ⚙️ **Environment Variables** — All config options and their values | Setup & configuration |
+| [DATABASE_ID_NAMES.md](DATABASE_ID_NAMES.md) | 📊 **MongoDB Collections** — All database schemas and IDs | Database design |
+
+**Quick Navigation:**
+- 👤 **First time?** → Start with [SETUP.md](SETUP.md)
+- 🔌 **Integrating webhooks?** → See [API_REFERENCE.md](API_REFERENCE.md)
+- 🏗️ **Understanding architecture?** → Read [ARCHITECTURE.md](ARCHITECTURE.md)
+- 📋 **Need all details?** → Check [PROJECT.md](PROJECT.md)
 
 ---
 
 
+## 📡 Webhook Integration
 
-## 📁 Barracks Layout
+**See [API_REFERENCE.md#-post-webhook](API_REFERENCE.md#-post-webhook) for complete webhook documentation and examples.**
 
-See [DATABASE_ID_NAMES.md](DATABASE_ID_NAMES.md) for all MongoDB collection names and ID conventions.
-
-Project structure and file layout are described in [PROJECT.md](PROJECT.md).
-
----
-
-
-## 📡 Orders Inbound (Webhook)
-
-### `POST /webhook`
-
-**Headers:**
-```
-Authorization: Bearer {WEBHOOK_API_KEY}
-Content-Type: application/json
-```
-
-**Request Example:**
-```json
-{
-  "event": "member.updated",
-  "member": {
-    "name": "John Smith",
-    "memberID": "12345",
-    "discordID": "987654321",
-    "changeFields": ["rank", "medals"],
-    "data": {
-      "rank": "SGT",
-      "Uniform": "Blue",
-      "badge": "Infantry",
-      "medallions": ["Bronze1"],
-      "citations": ["campaign", "gallantry"],
-      "TrainingMedals": ["ExpR"],
-      "RifleManBadge": "PTE"
+**Quick Example:**
+```bash
+curl -X POST http://localhost:42070/webhook \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": "member.updated",
+    "member": {
+      "name": "John Smith",
+      "memberID": "12345",
+      "discordID": "987654321",
+      "data": {"rank": "SGT", "Uniform": "Blue", "badge": "Infantry"}
     }
-  }
-}
+  }'
 ```
 
-**Response Example:**
-```json
-{
-  "status": "queued",
-  "jobId": "job_1a2b3c4d",
-  "message": "Image generation queued for MemberID 12345"
-}
-```
+**Trigger Fields** (regenerate image):
+- `rank`, `Uniform`, `badge`, `medallions`, `citations`, `TrainingMedals`, `RifleManBadge`
+
+**Ignored Fields** (no image regeneration):
+- `name`, `discordID`, `memberID`, other non-visual fields
 
 ---
 
 
-## 📊 What Triggers a Uniform Change?
+## 🐛 Troubleshooting
 
-Regenerates image if changed:
-- `rank` — Military rank
-- `Uniform` — Uniform color (Blue/Brown)
-- `badge` — Corps badge
-- `medallions` — Decorative medals
-- `citations` — Service medals
-- `TrainingMedals` — Training badges
-- `RifleManBadge` — Marksmanship badge
-
-Ignores (no regen):
-- `name`, `discordID`, `memberID`, and other non-visual fields
-
----
-
-
-## 🐛 Field Diagnostics
-
-See [PROJECT.md](PROJECT.md#-troubleshooting) for common issues and solutions.
+See [SETUP.md#-troubleshooting-installation](SETUP.md#-troubleshooting-installation) for installation issues or [PROJECT.md#-troubleshooting](PROJECT.md#-troubleshooting) for runtime issues.
 
 ---
 
@@ -289,19 +264,16 @@ Found a bug? Have a feature idea?
 ---
 
 
-## 📞 Support
+## 📞 Need Help?
 
-- 📖 Read [PROJECT.md](PROJECT.md) for detailed docs
-- 🏗️ Check [ARCHITECTURE.md](ARCHITECTURE.md) for system design
-- 🚀 Follow [SETUP.md](SETUP.md) for quick start
-- 🐛 See troubleshooting in [PROJECT.md](PROJECT.md#-troubleshooting)
+**All documentation is organized at the top of this page.** Choose what applies to you:
 
----
-
-
-## 🎉 Ready to Deploy?
-
-**[→ Go to SETUP.md](SETUP.md) to get running in 5 minutes**
+- **Getting started?** → [SETUP.md](SETUP.md) (5-min quick start)
+- **Building webhooks?** → [API_REFERENCE.md](API_REFERENCE.md) (curl examples, schemas)
+- **Understanding the system?** → [ARCHITECTURE.md](ARCHITECTURE.md) (design patterns, flow)
+- **Need everything?** → [PROJECT.md](PROJECT.md) (comprehensive guide)
+- **Configuration issues?** → [CONFIGURATION.md](CONFIGURATION.md) (all env vars)
+- **Database questions?** → [DATABASE_ID_NAMES.md](DATABASE_ID_NAMES.md) (MongoDB collections)
 
 ---
 
