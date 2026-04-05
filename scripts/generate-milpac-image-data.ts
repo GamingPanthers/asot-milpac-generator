@@ -1,33 +1,63 @@
 import fs from 'fs';
 import path from 'path';
 
-// Paths to your JSON files
-const milpacsPath = path.resolve('c:/Users/Andrew/Documents/asot_milpac.milpacs.json');
-const outputPath = path.resolve('c:/Users/Andrew/Documents/asot_milpac.members.json');
+// Read input path from command line or use defaults
+const args = process.argv.slice(2);
+const inputPath = args[0] || 'asot_milpac.milpacs.json';
+const outputPath = args[1] || 'asot_milpac.members.json';
 
-// Read milpac_data (asot_milpac.milpacs.json)
-const milpacData = JSON.parse(fs.readFileSync(milpacsPath, 'utf-8'));
+// Validate input file exists
+if (!fs.existsSync(inputPath)) {
+  console.error(`Input file not found: ${inputPath}`);
+  console.error(`Usage: npm run generate-milpac-image-data <inputFile> <outputFile>`);
+  process.exit(1);
+}
 
-// Transform milpac_data to milpac_image_data format
-const imageData = milpacData.map((entry: any) => {
-  return {
-    memberID: entry._id?.$oid || entry._id || entry.memberID,
-    name: entry.name,
-    discordID: entry.discordUid || entry.discordID,
-    data: {
+try {
+  console.log(`Reading milpac data from: ${inputPath}`);
+  const milpacData = JSON.parse(fs.readFileSync(inputPath, 'utf-8'));
+
+  if (!Array.isArray(milpacData)) {
+    throw new Error('Input file must contain an array of milpac entries');
+  }
+
+  console.log(`Processing ${milpacData.length} entries...`);
+
+  // Transform milpac_data to milpac_image_data format
+  const imageData = milpacData.map((entry: any, index: number) => {
+    // Validate required fields
+    if (!entry.memberID && !entry._id) {
+      console.warn(`Entry ${index} missing memberID and _id, skipping`);
+      return null;
+    }
+
+    return {
+      memberID: entry.memberID || entry._id?.$oid || entry._id?.toString(),
+      name: entry.name || 'Unknown',
+      discordID: entry.discordUid || entry.discordID || '',
       rank: entry.rankName || entry.rank || '',
-      Uniform: '', // Fill as needed
-      badge: '', // Fill as needed
-      medallions: entry.awards || [],
-      citations: entry.awards?.filter((a: string) => a.includes('Citation')) || [],
-      TrainingMedals: entry.qualifications || [],
-      RifleManBadge: '', // Fill as needed
-    },
-    lastUpdated: new Date(),
-    imageUrl: '', // Fill as needed
-  };
-});
+      data: {
+        rank: entry.rankName || entry.rank || '',
+        Uniform: entry.Uniform || '',
+        badge: entry.badge || '',
+        medallions: Array.isArray(entry.awards) ? entry.awards : [],
+        citations: Array.isArray(entry.awards)
+          ? entry.awards.filter((a: string) => typeof a === 'string' && a.includes('Citation'))
+          : [],
+        TrainingMedals: Array.isArray(entry.qualifications) ? entry.qualifications : [],
+        RifleManBadge: entry.RifleManBadge || '',
+      },
+      dateCreated: new Date().toISOString(),
+      dateModified: new Date().toISOString(),
+      imageUrl: '',
+    };
+  }).filter((entry: any) => entry !== null);
 
-// Write to milpac_image_data (asot_milpac.members.json)
-fs.writeFileSync(outputPath, JSON.stringify(imageData, null, 2));
-console.log('Generated asot_milpac.members.json from asot_milpac.milpacs.json');
+  // Write output
+  fs.writeFileSync(outputPath, JSON.stringify(imageData, null, 2));
+  console.log(`✓ Generated ${imageData.length} entries in: ${outputPath}`);
+  console.log(`  Skipped: ${milpacData.length - imageData.length} entries with missing data`);
+} catch (err) {
+  console.error('Error processing file:', err instanceof Error ? err.message : err);
+  process.exit(1);
+}

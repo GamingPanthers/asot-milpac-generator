@@ -5,6 +5,7 @@ import imageGeneratorService from './imageGenerator';
 import storageService from './storage';
 import memberService from './member';
 import WebIntegrationService from './webIntegration';
+import { config } from '../config';
 import logger from '../utils/logger';
 
 /**
@@ -30,8 +31,15 @@ export class JobProcessor {
       // Update member record with image metadata
       await memberService.updateMemberImage(memberID, imagePath);
 
-      // Notify milpac-web of successful generation
-      await WebIntegrationService.notifyImageGeneration(memberID, imagePath);
+      // Notify milpac-web of successful generation (non-blocking)
+      try {
+        // Only use filename, not full path
+        const imageUrl = `${config.IMAGE_SERVICE_URL}/milpac/${memberID}.png`;
+        await WebIntegrationService.notifyImageGeneration(memberID, imageUrl);
+      } catch (notifyError) {
+        // Log but don't fail the job - notification failure shouldn't block success
+        logger.warn('Failed to notify web service', { memberID, error: notifyError instanceof Error ? notifyError.message : notifyError });
+      }
 
       // Log successful generation
       const executionTime = Date.now() - startTime;
@@ -39,7 +47,7 @@ export class JobProcessor {
 
       await this.logGeneration({
         memberID,
-        jobId: job.id || '',
+        jobId: job.id || `job_${memberID}_${Date.now()}`,
         timestamp: new Date(),
         status: 'success',
         executionTime,
@@ -55,7 +63,6 @@ export class JobProcessor {
 
       return {
         success: true,
-        memberId: memberID,
         memberID,
         imagePath,
         size: imageSize,
@@ -68,7 +75,7 @@ export class JobProcessor {
       // Log failed generation
       await this.logGeneration({
         memberID,
-        jobId: job.id || '',
+        jobId: job.id || `job_${memberID}_${Date.now()}`,
         timestamp: new Date(),
         status: 'failed',
         executionTime,

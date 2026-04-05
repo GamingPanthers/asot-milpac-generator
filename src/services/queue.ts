@@ -56,13 +56,23 @@ export class QueueService {
    */
   async addJob(job: GenerationJob): Promise<string> {
     try {
+      // Validate job
+      if (!job || !job.jobId || !job.memberID) {
+        throw new Error('Invalid job: jobId and memberID are required');
+      }
+
       const queuedJob = await this.queue.add(job.jobId, job, {
         jobId: job.jobId,
+        attempts: config.MAX_RETRIES,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
       });
       logger.info('Job enqueued', { jobId: job.jobId, memberID: job.memberID });
       return queuedJob.id || '';
     } catch (error) {
-      logger.error('Failed to add job to queue', { error });
+      logger.error('Failed to add job to queue', { error: error instanceof Error ? error.message : error });
       throw error;
     }
   }
@@ -72,6 +82,11 @@ export class QueueService {
    */
   async getJobStatus(jobId: string): Promise<any> {
     try {
+      // Validate jobId
+      if (!jobId || typeof jobId !== 'string' || jobId.trim().length === 0) {
+        throw new Error('Invalid jobId provided');
+      }
+
       const job = await this.queue.getJob(jobId);
       if (!job) return null;
 
@@ -82,9 +97,8 @@ export class QueueService {
       
       // Convert file path to URL
       let imageUrl = null;
-      if (result?.imagePath) {
-        const memberId = result.memberId || job.data?.memberID;
-        imageUrl = `${config.IMAGE_SERVICE_URL}/milpac/${memberId}.png`;
+      if (result?.imagePath && result?.memberID) {
+        imageUrl = `${config.IMAGE_SERVICE_URL}/milpac/${result.memberID}.png`;
       }
       
       return {
@@ -93,7 +107,7 @@ export class QueueService {
         imageUrl,
       };
     } catch (error) {
-      logger.error('Failed to get job status', { jobId, error });
+      logger.error('Failed to get job status', { jobId, error: error instanceof Error ? error.message : error });
       return null;
     }
   }
@@ -126,21 +140,30 @@ export class QueueService {
       const counts = await this.queue.getJobCounts('active', 'completed', 'failed', 'delayed', 'waiting');
       return counts;
     } catch (error) {
-      logger.error('Failed to get queue stats', { error });
+      logger.error('Failed to get queue stats', { error: error instanceof Error ? error.message : error });
       return {};
     }
   }
 
   /**
-   * Clear queue
+   * Clear completed/failed jobs (keeps jobs from last 7 days)
    */
   async clear(): Promise<void> {
     try {
-      await this.queue.clean(0, 1000);
-      logger.info('Queue cleared');
+      // Keep jobs from the last 7 days, remove everything older
+      const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+      await this.queue.clean(sevenDaysInMs, 100);
+      logger.info('Queue cleaned - removed jobs older than 7 days');
     } catch (error) {
-      logger.error('Failed to clear queue', { error });
+      logger.error('Failed to clear queue', { error: error instanceof Error ? error.message : error });
     }
+  }
+
+  /**
+   * Get Redis client (for app.locals and health checks)
+   */
+  getRedisClient(): Redis {
+    return this.redis;
   }
 
   /**
@@ -155,7 +178,7 @@ export class QueueService {
       await this.redis.quit();
       logger.info('✓ Queue service closed');
     } catch (error) {
-      logger.error('Failed to close queue service', { error });
+      logger.error('Failed to close queue service', { error: error instanceof Error ? error.message : error });
     }
   }
 }

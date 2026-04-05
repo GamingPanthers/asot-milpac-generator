@@ -40,10 +40,23 @@ export class WebhookHandler {
       return false;
     }
 
+    // Validate event type
+    const validEvents = ['member.updated', 'certificate.requested'];
+    if (!validEvents.includes(payload.event)) {
+      logger.warn('Invalid event type', { event: payload.event });
+      return false;
+    }
+
     const member = payload.member;
 
     if (!member.memberID || !member.name || !member.discordID || !member.data) {
       logger.warn('Missing required member fields in webhook');
+      return false;
+    }
+
+    // Validate changeFields if present
+    if (member.changeFields !== undefined && !Array.isArray(member.changeFields)) {
+      logger.warn('changeFields must be an array');
       return false;
     }
 
@@ -65,6 +78,7 @@ export class WebhookHandler {
           status: 'error',
           message: 'Unauthorized',
           code: 401,
+          error: 'Invalid or missing authorization header',
         });
         return;
       }
@@ -77,29 +91,31 @@ export class WebhookHandler {
           status: 'error',
           message: 'Invalid webhook payload',
           code: 400,
+          error: 'Missing or invalid required fields',
         });
         return;
       }
 
       const { member } = payload;
-      const { memberID, name, discordID, changeFields, data } = member;
+      const { memberID, name, discordID, changeFields = [], data } = member;
 
-      logger.info('Webhook received', { memberID, event: payload.event, changeFields });
+      logger.info('Webhook received', { memberID, event: payload.event, changeFieldsCount: changeFields.length });
 
       // Get existing member data
       const existingMember = await memberService.getMember(memberID);
       const oldData = existingMember?.data || null;
 
-      // Detect changes
+      // Detect changes (use empty array if changeFields not provided)
       const hasChanges = memberService.detectChanges(oldData, data, changeFields);
 
       if (!hasChanges && existingMember) {
-        logger.info('No relevant changes detected', { memberID, changeFields });
+        logger.info('No relevant changes detected', { memberID });
         res.status(200).json({
           status: 'success',
           message: 'No relevant changes detected',
           data: {
             jobId: null,
+            memberID,
             queued: false,
           },
         });
@@ -142,6 +158,7 @@ export class WebhookHandler {
         status: 'error',
         message: 'Internal server error',
         code: 500,
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   }
@@ -153,11 +170,12 @@ export class WebhookHandler {
     try {
       const { jobId } = req.params;
 
-      if (!jobId) {
+      if (!jobId || typeof jobId !== 'string' || jobId.trim().length === 0) {
         res.status(400).json({
           status: 'error',
           message: 'Job ID is required',
           code: 400,
+          error: 'Job ID must be a non-empty string',
         });
         return;
       }
@@ -169,6 +187,7 @@ export class WebhookHandler {
           status: 'error',
           message: 'Job not found',
           code: 404,
+          error: `No job found with ID: ${jobId}`,
         });
         return;
       }
@@ -189,6 +208,7 @@ export class WebhookHandler {
         status: 'error',
         message: 'Internal server error',
         code: 500,
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   }
@@ -212,6 +232,7 @@ export class WebhookHandler {
         status: 'error',
         message: 'Internal server error',
         code: 500,
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   }
