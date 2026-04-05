@@ -84,7 +84,7 @@ export class QueueService {
       let imageUrl = null;
       if (result?.imagePath) {
         const memberId = result.memberId || job.data?.memberID;
-        imageUrl = `http://localhost:${config.PORT}/milpac/${memberId}.png`;
+        imageUrl = `${config.IMAGE_SERVICE_URL}/milpac/${memberId}.png`;
       }
       
       return {

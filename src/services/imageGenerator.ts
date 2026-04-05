@@ -9,17 +9,17 @@ import { getAssetInfo, getAssetsInfo } from '../lib/mongo';
 import { createCanvas, loadImage, registerFont } from 'canvas';
 
 /**
- * Military uniform image generator using pngjs
- * Simplified implementation that generates basic PNG images
+ * Military uniform image generator
+ * Generates MILPAC images based on member rank, corps, awards, qualifications, and certificates
  */
 export class ImageGeneratorService {
 
   /**
    * Compose uniform image from assets based on milpac data
    */
-  async generateUniform(memberID: string, data: MemberData): Promise<Buffer> {
+  async generateUniform(userId: string, data: MemberData): Promise<Buffer> {
     try {
-      logger.info('Starting image generation', { memberID, data });
+      logger.info('Starting image generation', { userId, data });
 
       // Base canvas
       const width = config.IMAGE_WIDTH;
@@ -34,8 +34,6 @@ export class ImageGeneratorService {
         },
       });
 
-      // DB-driven: mapAssetId will be replaced by DB lookups
-
       // Helper to resolve asset path
       const asset = (folder: string, name: string) =>
         path.join(__dirname, '../../images', folder, `${name}.png`);
@@ -43,47 +41,29 @@ export class ImageGeneratorService {
       // Compose layers
       const layers: sharp.OverlayOptions[] = [];
 
-      // --- Name on Badge (Composite overlay) ---
-      if (
-        data.name && typeof data.name === 'string' && data.name.trim() !== '' &&
-        data.badge
-      ) {
-        logger.info('Preparing to add name to badge', { name: data.name, badge: data.badge });
-        const badgeAsset = await getAssetInfo('milpac_badges', data.badge);
-        if (badgeAsset && badgeAsset.assetFile) {
-          const badgePath = asset('corps-badges', badgeAsset.assetFile);
-          if (fs.existsSync(badgePath)) {
-            logger.info('Badge asset found for name overlay', { badgePath });
-            // Load badge image into canvas
-            const badgeImg = await loadImage(badgePath);
-            const tagWidth = badgeImg.width;
-            const tagHeight = badgeImg.height;
-            const fontSize = Math.floor(tagHeight * 0.5);
-            const canvas = createCanvas(tagWidth, tagHeight);
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(badgeImg, 0, 0, tagWidth, tagHeight);
-            // Draw name text centered on badge
-            const nameText = data.name.trim().toUpperCase();
-            ctx.font = `bold ${fontSize}px 'Open Sans'`;
-            ctx.fillStyle = 'white';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'black';
-            ctx.shadowBlur = 4;
-            ctx.fillText(nameText, tagWidth / 2, tagHeight / 2);
-            logger.info('Drew name text on badge', { name: nameText, fontSize, tagWidth, tagHeight });
-            // Composite badge+name at badge position
-            layers.push({ input: canvas.toBuffer('image/png'), top: 800, left: 50 });
-            logger.info('Added name text to badge layer', { name: nameText, badgePath, top: 800, left: 50 });
-          } else {
-            logger.warn('Badge asset file does not exist for name overlay', { badgePath });
-          }
-        } else {
-          logger.warn('Badge asset not found in DB for name overlay', { badge: data.badge });
-        }
+      // --- Base Uniform Layer ---
+      const { getCollarAsset, getUniformAsset } = require('../config');
+      const unitString = data.corps || '';
+      const uniformAsset = await getUniformAsset(unitString);
+      const uniformPath = asset('uniform', uniformAsset);
+      if (fs.existsSync(uniformPath)) {
+        layers.unshift({ input: uniformPath, top: 0, left: 0 });
+        logger.info('Added uniform base layer', { uniformAsset, uniformPath });
+      } else {
+        logger.warn('Uniform base asset not found', { uniformAsset, uniformPath });
       }
 
-      // Rank
+      // --- Collar Overlay ---
+      const collarAsset = await getCollarAsset(unitString);
+      const collarPath = asset('uniform', collarAsset);
+      if (fs.existsSync(collarPath)) {
+        layers.push({ input: collarPath, top: 0, left: 0 });
+        logger.info('Added uniform collar layer', { collarAsset, collarPath });
+      } else {
+        logger.warn('Uniform collar asset not found', { collarAsset, collarPath });
+      }
+
+      // --- Rank ---
       if (data.rank) {
         const rankAsset = await getAssetInfo('milpac_ranks', data.rank);
         if (rankAsset && rankAsset.assetFile) {
@@ -97,105 +77,84 @@ export class ImageGeneratorService {
         }
       }
 
-      // Badge (corps-badges)
-      if (data.badge) {
-        const badgeAsset = await getAssetInfo('milpac_badges', data.badge);
-        if (badgeAsset && badgeAsset.assetFile) {
-          const badgePath = asset('corps-badges', badgeAsset.assetFile);
-          logger.info('Adding badge layer', { badge: data.badge, badgePath });
-          if (fs.existsSync(badgePath)) {
-            layers.push({ input: badgePath, top: 800, left: 50 });
-          } else {
-            logger.warn('Badge asset not found', { badge: data.badge, badgePath });
-          }
-        }
+      // --- Name Display ---
+      if (data.name && typeof data.name === 'string' && data.name.trim() !== '') {
+        logger.info('Preparing to add name display', { name: data.name });
+        const nameText = data.name.trim().toUpperCase();
+        const nameWidth = 200;
+        const nameHeight = 60;
+        const fontSize = 32;
+        const canvas = createCanvas(nameWidth, nameHeight);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, nameWidth, nameHeight);
+        ctx.font = `bold ${fontSize}px 'Arial'`;
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(nameText, nameWidth / 2, nameHeight / 2);
+        logger.info('Drew name text', { name: nameText, fontSize });
+        layers.push({ input: canvas.toBuffer('image/png'), top: 800, left: 50 });
       }
 
-      // Medals (medallions)
-      if (data.medallions && data.medallions.length > 0) {
-        const medallionAssets = await getAssetsInfo('milpac_medallions', data.medallions);
-        medallionAssets.forEach((medalAsset: any, idx: number) => {
-          if (medalAsset && medalAsset.assetFile) {
-            const medalPath = asset('medallions', medalAsset.assetFile);
+      // --- Awards ---
+      if (data.awards && data.awards.length > 0) {
+        const awardAssets = await getAssetsInfo('milpac_awards', 
+          data.awards.map(a => a.name));
+        awardAssets.forEach((awardAsset: any, idx: number) => {
+          if (awardAsset && awardAsset.assetFile) {
+            const awardPath = asset('awards', awardAsset.assetFile);
             const col = idx % 8;
             const row = Math.floor(idx / 8);
             const x = 50 + col * 45;
-            const y = 250 + row * 45;
-            layers.push({ input: medalPath, top: y, left: x });
-            logger.debug('Added medallion layer', { medal: medalAsset._id, medalPath, x, y });
+            const y = 400 + row * 45;
+            if (fs.existsSync(awardPath)) {
+              layers.push({ input: awardPath, top: y, left: x });
+              logger.debug('Added award layer', { award: awardAsset._id, awardPath, x, y });
+            }
           }
         });
       }
 
-      // Citations (ribbons)
-      if (data.citations && data.citations.length > 0) {
-        const citationAssets = await getAssetsInfo('milpac_citations', data.citations);
-        citationAssets.forEach((citationAsset: any, idx: number) => {
-          if (citationAsset && citationAsset.assetFile) {
-            const citationPath = asset('ribbons', citationAsset.assetFile);
+      // --- Qualifications ---
+      if (data.qualifications && data.qualifications.length > 0) {
+        const qualAssets = await getAssetsInfo('milpac_qualifications', 
+          data.qualifications.map(q => q.qualification));
+        qualAssets.forEach((qualAsset: any, idx: number) => {
+          if (qualAsset && qualAsset.assetFile) {
+            const qualPath = asset('qualifications', qualAsset.assetFile);
             const col = idx % 8;
             const row = Math.floor(idx / 8);
             const x = 50 + col * 45;
-            const y = 550 + row * 25;
-            layers.push({ input: citationPath, top: y, left: x });
-            logger.debug('Added citation layer', { citation: citationAsset._id, citationPath, x, y });
+            const y = 550 + row * 45;
+            if (fs.existsSync(qualPath)) {
+              layers.push({ input: qualPath, top: y, left: x });
+              logger.debug('Added qualification layer', { qualification: qualAsset._id, qualPath, x, y });
+            }
           }
         });
       }
 
-      // Rifleman Badge (corps-badges)
-      if (data.RifleManBadge) {
-        const rifleAsset = await getAssetInfo('milpac_badges', data.RifleManBadge);
-        if (rifleAsset && rifleAsset.assetFile) {
-          const riflePath = asset('corps-badges', rifleAsset.assetFile);
-          logger.info('Adding rifleman badge layer', { RifleManBadge: data.RifleManBadge, riflePath });
-          if (fs.existsSync(riflePath)) {
-            layers.push({ input: riflePath, top: 900, left: 50 });
-          } else {
-            logger.warn('Rifleman badge asset not found', { RifleManBadge: data.RifleManBadge, riflePath });
-          }
-        }
-      }
-
-      // Training Medals
-      if (data.TrainingMedals && data.TrainingMedals.length > 0) {
-        const trainingAssets = await getAssetsInfo('milpac_training_medals', data.TrainingMedals);
-        trainingAssets.forEach((medalAsset: any, idx: number) => {
-          if (medalAsset && medalAsset.assetFile) {
-            const trainPath = asset('training', medalAsset.assetFile);
-            layers.push({ input: trainPath, top: 950, left: 50 + idx * 50 });
-            logger.debug('Added training medal layer', { medal: medalAsset._id, trainPath, idx });
+      // --- Certificates ---
+      if (data.certificates && data.certificates.length > 0) {
+        const certAssets = await getAssetsInfo('milpac_certificates', 
+          data.certificates.map(c => c.id));
+        certAssets.forEach((certAsset: any, idx: number) => {
+          if (certAsset && certAsset.assetFile) {
+            const certPath = asset('certificates', certAsset.assetFile);
+            const col = idx % 8;
+            const row = Math.floor(idx / 8);
+            const x = 50 + col * 45;
+            const y = 700 + row * 45;
+            if (fs.existsSync(certPath)) {
+              layers.push({ input: certPath, top: y, left: x });
+              logger.debug('Added certificate layer', { certificate: certAsset._id, certPath, x, y });
+            }
           }
         });
       }
 
-      // Uniform/collar logic would also be DB-driven (not shown here)
-      let unitString = '';
-      if (data.badge && typeof data.badge === 'string' && data.badge.trim() !== '') {
-        unitString = data.badge;
-      } else if (data.Uniform && typeof data.Uniform === 'string' && data.Uniform.trim() !== '') {
-        unitString = data.Uniform;
-      }
-      const { getCollarAsset, getUniformAsset } = require('../config');
-      const uniformAsset = await getUniformAsset(unitString);
-      const collarAsset = await getCollarAsset(unitString);
-      const uniformPath = asset('uniform', uniformAsset);
-      if (fs.existsSync(uniformPath)) {
-        layers.unshift({ input: uniformPath, top: 0, left: 0 });
-        logger.info('Added uniform base layer (bottom)', { uniformAsset, uniformPath });
-      } else {
-        logger.warn('Uniform base asset not found', { uniformAsset, uniformPath });
-      }
-      // Collar overlay (if present)
-      const collarPath = asset('uniform', collarAsset);
-      if (fs.existsSync(collarPath)) {
-        layers.push({ input: collarPath, top: 0, left: 0 });
-        logger.info('Added uniform collar layer', { collarAsset, collarPath });
-      } else {
-        logger.warn('Uniform collar asset not found', { collarAsset, collarPath });
-      }
-
-      // Overlay border frame if present
+      // --- Border Frame ---
       const framePath = path.join(__dirname, '../../images/border.png');
       if (fs.existsSync(framePath)) {
         layers.push({ input: framePath, top: 0, left: 0 });
@@ -207,13 +166,14 @@ export class ImageGeneratorService {
       logger.info('Compositing all layers', { layerCount: layers.length });
       // Composite all layers
       const final = await base.composite(layers).png().toBuffer();
-      logger.info('Image generated successfully (composite)', { memberID, size: final.length });
+      logger.info('Image generated successfully', { userId, size: final.length });
       return final;
     } catch (error) {
-      logger.error('Failed to generate image (composite)', { memberID, error, data });
+      logger.error('Failed to generate image', { userId, error, data });
       throw error;
     }
   }
 }
 
 export default new ImageGeneratorService();
+

@@ -52,6 +52,10 @@ export class WebhookHandler {
 
   /**
    * Handle incoming webhook
+   * Supports both "member.updated" and "certificate.requested" events.
+   * Both event types are processed identically, using change detection to determine
+   * whether a new image generation is needed. The event type distinction is maintained
+   * for future extensibility and clarity of intent from the web service.
    */
   static async handleWebhook(req: Request, res: Response<ApiResponse>): Promise<void> {
     try {

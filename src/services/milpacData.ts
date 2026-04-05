@@ -52,13 +52,9 @@ export class MilpacDataService {
       // Provide empty data structure as fallback
       this.data = {
         ranks: [],
-        callsigns: [],
         corps: [],
-        operations: {},
-        departments: {},
         awards: [],
         qualifications: [],
-        discipline: [],
         certificates: [],
       };
     }

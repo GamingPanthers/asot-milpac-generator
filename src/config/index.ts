@@ -20,6 +20,7 @@ const config = {
   IMAGE_OUTPUT_DIR: process.env.IMAGE_OUTPUT_DIR || path.join(process.cwd(), 'milpac'),
   IMAGE_WIDTH: parseInt(process.env.IMAGE_WIDTH || '1398', 10),
   IMAGE_HEIGHT: parseInt(process.env.IMAGE_HEIGHT || '1000', 10),
+  IMAGE_SERVICE_URL: process.env.IMAGE_SERVICE_URL || 'http://localhost:42070',
 
   // Job Queue
   MAX_RETRIES: parseInt(process.env.MAX_RETRIES || '5', 10),

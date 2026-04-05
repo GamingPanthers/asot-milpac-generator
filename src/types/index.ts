@@ -1,28 +1,39 @@
 /**
- * Member data structure from Koda database
+ * Member data structure - simplified to only required fields for milpac generation
  */
 export interface MemberData {
-  name: string;
-  memberID: string;
-  discordID: string;
-  rank: string; // references milpac_ranks _id
-  badge: string; // references milpac_badges _id
-  medallions: string[]; // references milpac_medallions _id
-  citations: string[]; // references milpac_citations _id
-  TrainingMedals: string[]; // references milpac_training_medals _id
-  RifleManBadge: string; // references milpac_badges _id
-  Uniform?: string; // optional, for fallback
+  name?: string;
+  rank?: string;
+  corps?: string;
+  awards?: {
+    date: string;
+    name: string;
+    type: string;
+    issuedById?: string;
+    issuedByName?: string;
+  }[];
+  qualifications?: {
+    date: string;
+    qualification: string;
+    issuedById?: string;
+    issuedByName?: string;
+  }[];
+  certificates?: {
+    id: string;
+    name: string;
+    date?: string;
+  }[];
 }
 
 /**
- * Webhook payload structure from Koda API
+ * Webhook payload structure from website API
  */
 export interface WebhookPayload {
   event: string;
-  member: {
-    name: string;
-    memberID: string;
-    discordID: string;
+  user: {
+    _id: string;
+    id: string;
+    name?: string;
     changeFields: string[];
     data: MemberData;
   };
@@ -33,9 +44,8 @@ export interface WebhookPayload {
  */
 export interface StoredMember {
   _id?: string;
-  memberID: string;
+  userId: string;
   name: string;
-  discordID: string;
   data: MemberData;
   lastUpdated: Date;
   lastGenerated?: Date;
@@ -47,7 +57,7 @@ export interface StoredMember {
  */
 export interface GenerationJob {
   jobId: string;
-  memberID: string;
+  userId: string;
   name: string;
   data: MemberData;
   timestamp: Date;
@@ -61,7 +71,7 @@ export interface GenerationJob {
  */
 export interface GenerationLog {
   _id?: string;
-  memberID: string;
+  userId: string;
   jobId: string;
   timestamp: Date;
   status: 'success' | 'failed';
