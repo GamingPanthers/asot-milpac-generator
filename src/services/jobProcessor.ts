@@ -1,13 +1,23 @@
 import { Job } from 'bullmq';
-import mongoose from 'mongoose';
 import { GenerationJob, GenerationLog as GenerationLogType } from '../types';
 import { GenerationLogModel } from '../models';
 import uniformGeneratorService from './uniformGenerator';
 import storageService from './storage';
 import memberService from './member';
 import WebIntegrationService from './webIntegration';
+import BatchQueryService, { MilpacDocument } from './batchQueryService';
+import { performanceMonitor } from './performanceMonitor';
 import { config } from '../config';
 import logger from '../utils/logger';
+
+interface ProcessingResult {
+  success: boolean;
+  memberID: string;
+  imagePath?: string;
+  size?: number;
+  executionTime: number;
+  error?: string;
+}
 
 /**
  * Job processor for image generation
@@ -16,17 +26,22 @@ export class JobProcessor {
   /**
    * Process a generation job
    */
-  static async processGenerationJob(job: Job<GenerationJob>): Promise<any> {
+  static async processGenerationJob(job: Job<GenerationJob>): Promise<ProcessingResult> {
     const startTime = Date.now();
     const { memberID, jobId } = job.data;
 
     try {
       logger.info('Processing generation job', { memberID, jobId });
 
-      // Fetch fresh data from milpacs (authoritative source)
-      const db = mongoose.connection.db;
-      const milpac = await db?.collection('milpacs').findOne({ _id: new mongoose.Types.ObjectId(memberID) } as any);
-      
+      // Fetch fresh data from milpacs using batch query service (with caching)
+      const queryStartTime = Date.now();
+      const milpac = await BatchQueryService.fetchMember(memberID) as MilpacDocument | null;
+      const queryDuration = Date.now() - queryStartTime;
+
+      performanceMonitor.recordQuery('fetch_member_job', queryDuration, {
+        success: !!milpac,
+      });
+
       if (!milpac) {
         throw new Error(`Member not found in milpacs: ${memberID}`);
       }
@@ -59,7 +74,13 @@ export class JobProcessor {
       };
 
       // Generate image with fresh data
+      const generateStartTime = Date.now();
       const imageBuffer = await uniformGeneratorService.generateUniform(memberID, memberData);
+      const generateDuration = Date.now() - generateStartTime;
+
+      performanceMonitor.recordQuery('generate_uniform_job', generateDuration, {
+        success: true,
+      });
 
       // Save image to disk in uniform folder
       const imagePath = await storageService.saveImage(memberID, imageBuffer, 'uniform');

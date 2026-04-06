@@ -5,6 +5,7 @@ import logger from './utils/logger';
 import databaseService from './services/database';
 import queueService from './services/queue';
 import JobProcessor from './services/jobProcessor';
+import { ServiceInitializer } from './services/serviceInitializer';
 import routes from './routes';
 
 /**
@@ -14,6 +15,14 @@ async function startServer(): Promise<void> {
   try {
     // Validate configuration
     validateConfig();
+
+    // Initialize services (caching, performance monitoring, asset preloading)
+    const startupInfo = await ServiceInitializer.initialize();
+    logger.info('✓ Services initialized', {
+      assetsLoaded: startupInfo.assetsLoaded,
+      performanceMonitoringEnabled: startupInfo.performanceMonitoringEnabled,
+      cacheSystemReady: startupInfo.cacheSystemReady,
+    });
 
     const app: Application = express();
 

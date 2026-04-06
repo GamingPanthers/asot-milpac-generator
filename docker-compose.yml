@@ -2,12 +2,45 @@ version: '3.8'
 
 services:
 
+  mongodb:
+    image: mongo:7-alpine
+    container_name: milpac-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - milpac-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: mongod --replSet rs0 --bind_ip_all
+    restart: unless-stopped
+
+  mongodb-init:
+    image: mongo:7-alpine
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - milpac-network
+    entrypoint: /bin/bash
+    command: |
+      -c 'mongosh --host mongodb:27017 -u ${MONGO_USERNAME:-admin} -p ${MONGO_PASSWORD:-password} --authenticationDatabase admin --eval "rs.initiate()" || true'
+    restart: on-failure
+
   redis:
     image: redis:7-alpine
     container_name: milpac-redis
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     networks:
@@ -17,8 +50,58 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  milpac-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: milpac-generator
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      # Node Environment
+      NODE_ENV: ${NODE_ENV:-production}
+      
+      # Server Configuration
+      PORT: 3000
+      IMAGE_OUTPUT_DIR: /app/milpac
+      IMAGE_SERVICE_URL: ${IMAGE_SERVICE_URL:-http://localhost:3000}
+      
+      # MongoDB Connection (with connection pooling)
+      MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password}@mongodb:27017/milpac?authSource=admin&maxPoolSize=10&minPoolSize=2&maxIdleTimeMS=45000&retryWrites=true&journal=true
+      
+      # Redis Configuration
+      REDIS_URL: redis://redis:6379
+      
+      # Web Integration
+      WEB_SERVICE_URL: ${WEB_SERVICE_URL:-http://localhost:3001}
+      
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - ./milpac:/app/milpac
+      - ./logs:/app/logs
+    networks:
+      - milpac-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
 
 volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
   redis_data:
     driver: local
 

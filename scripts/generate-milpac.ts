@@ -6,6 +6,9 @@ import { Member } from '../src/models';
 import { UniformGeneratorService } from '../src/services/uniformGenerator';
 import { config } from '../src/config';
 import { closeDb } from '../src/lib/mongo';
+import BatchQueryService from '../src/services/batchQueryService';
+import { performanceMonitor } from '../src/services/performanceMonitor';
+import logger from '../src/utils/logger';
 
 async function main() {
   const memberID = process.argv[2];
@@ -24,11 +27,17 @@ async function main() {
     await mongoose.connect(config.MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true } as any);
     console.log('Connected to MongoDB');
 
-    const db = mongoose.connection.db;
+    // Fetch member using batch query service (with caching)
+    const queryStartTime = Date.now();
+    const milpac = await BatchQueryService.fetchMember(memberID);
+    const queryDuration = Date.now() - queryStartTime;
     
-    // Query milpacs collection (authoritative source) directly
-    // Convert memberID string to ObjectId for the query
-    const milpac = await db?.collection('milpacs').findOne({ _id: new mongoose.Types.ObjectId(memberID) } as any);
+    // Record performance metric
+    performanceMonitor.recordQuery('fetch_member', queryDuration, {
+      success: !!milpac,
+      documentsReturned: milpac ? 1 : 0,
+    });
+
     if (!milpac) {
       console.error(`No member found with memberID: ${memberID}`);
       process.exit(1);
@@ -64,7 +73,13 @@ async function main() {
     };
 
     const generator = new UniformGeneratorService();
+    const generateStartTime = Date.now();
     const buffer = await generator.generateUniform(memberID, memberData);
+    const generateDuration = Date.now() - generateStartTime;
+
+    performanceMonitor.recordQuery('generate_uniform', generateDuration, {
+      success: true,
+    });
 
     // Ensure output directory exists
     const outDir = path.join(__dirname, '../milpac/uniform');
@@ -75,8 +90,12 @@ async function main() {
     const outPath = path.join(outDir, `${memberID}.png`);
     fs.writeFileSync(outPath, buffer);
     console.log(`✓ Generated image at: ${outPath} (${buffer.length} bytes)`);
+
+    // Log performance statistics
+    performanceMonitor.logStats();
   } catch (err) {
     console.error('Error:', err instanceof Error ? err.message : err);
+    performanceMonitor.logStats();
     process.exit(1);
   } finally {
     // Only disconnect once

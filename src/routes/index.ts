@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import WebhookHandler from '../middleware/webhookHandler';
+import LogsService from '../services/logsService';
 import logger from '../utils/logger';
 
 /**
@@ -53,6 +54,123 @@ router.get('/queue/stats', asyncHandler(async (req: Request, res: Response) => {
   }
 
   await WebhookHandler.getQueueStats(req, res);
+}));
+
+/**
+ * GET /logs - Retrieve application logs (requires authorization)
+ * Authorization: Bearer token in Authorization header (WEBHOOK_API_KEY)
+ * Query params:
+ *   - type: 'error' or 'combined' (default: 'combined')
+ *   - level: filter by log level (error, warn, info, debug)
+ *   - limit: number of logs to return (default: 100, max: 10000)
+ *   - search: search logs by message or metadata
+ *   - format: 'json' or 'text' (default: 'json')
+ * Response: { status, message, data: { entries[], total, returned, type, hasMore } }
+ */
+router.get('/logs', asyncHandler(async (req: Request, res: Response) => {
+  // Validate authorization for sensitive endpoint
+  if (!WebhookHandler.validateAuthorization(req)) {
+    res.status(401).json({
+      status: 'error',
+      message: 'Unauthorized',
+      code: 401,
+      error: 'Invalid or missing authorization header',
+    });
+    return;
+  }
+
+  const type = (req.query.type as string) || 'combined';
+  const level = req.query.level as string | undefined;
+  const limit = parseInt(req.query.limit as string, 10) || 100;
+  const search = req.query.search as string | undefined;
+  const format = (req.query.format as string) || 'json';
+
+  // Validate type parameter
+  if (type !== 'error' && type !== 'combined') {
+    res.status(400).json({
+      status: 'error',
+      message: 'Invalid type parameter. Must be "error" or "combined"',
+    });
+    return;
+  }
+
+  // Validate format parameter
+  if (format !== 'json' && format !== 'text') {
+    res.status(400).json({
+      status: 'error',
+      message: 'Invalid format parameter. Must be "json" or "text"',
+    });
+    return;
+  }
+
+  if (format === 'text') {
+    // Return plaintext response
+    const logsText = LogsService.getLogsText({ type: type as 'error' | 'combined', level, limit, search });
+    res.type('text/plain').send(logsText);
+  } else {
+    // Return JSON response
+    const response = LogsService.getLogsResponse({
+      type: type as 'error' | 'combined',
+      level,
+      limit,
+      format: 'json',
+      search,
+    });
+    res.status(response.status === 'success' ? 200 : 500).json(response);
+  }
+}));
+
+/**
+ * GET /logs/text - Retrieve application logs in plaintext format (requires authorization)
+ * Query params: same as /logs endpoint
+ * Response: plaintext log lines
+ */
+router.get('/logs/text', asyncHandler(async (req: Request, res: Response) => {
+  // Validate authorization for sensitive endpoint
+  if (!WebhookHandler.validateAuthorization(req)) {
+    res.status(401).json({
+      status: 'error',
+      message: 'Unauthorized',
+      code: 401,
+      error: 'Invalid or missing authorization header',
+    });
+    return;
+  }
+
+  const type = (req.query.type as string) || 'combined';
+  const level = req.query.level as string | undefined;
+  const limit = parseInt(req.query.limit as string, 10) || 100;
+  const search = req.query.search as string | undefined;
+
+  const logsText = LogsService.getLogsText({
+    type: type as 'error' | 'combined',
+    level,
+    limit,
+    search,
+  });
+
+  res.type('text/plain').send(logsText);
+}));
+
+/**
+ * GET /logs/stats - Get log file statistics (requires authorization)
+ * Authorization: Bearer token in Authorization header (WEBHOOK_API_KEY)
+ * Response: { status, message, data: { combined: { exists, size, lines, lastModified }, error: { ... } } }
+ */
+router.get('/logs/stats', asyncHandler(async (req: Request, res: Response) => {
+  // Validate authorization for sensitive endpoint
+  if (!WebhookHandler.validateAuthorization(req)) {
+    res.status(401).json({
+      status: 'error',
+      message: 'Unauthorized',
+      code: 401,
+      error: 'Invalid or missing authorization header',
+    });
+    return;
+  }
+
+  const response = LogsService.getLogStats();
+  res.status(response.status === 'success' ? 200 : 500).json(response);
 }));
 
 /**

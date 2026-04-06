@@ -1,11 +1,15 @@
 import { MemberData } from '../types';
-import { config } from '../config';
 import logger from '../utils/logger';
 import { createCanvas, loadImage } from 'canvas';
 import path from 'path';
 import fs from 'fs';
 import { getAssetsInfo } from '../lib/mongo';
 import milpacData from './milpacData';
+
+interface AssetObject {
+  assetFile: string;
+  [key: string]: unknown;
+}
 
 /**
  * Military uniform image generator
@@ -124,11 +128,12 @@ async generateUniform(userId: string, data: MemberData): Promise<Buffer> {
             data.qualifications.map(q => (typeof q === 'string' ? q : q.qualification) || '').filter(Boolean));
         
         const qualAssets2 = await Promise.all(
-            qualAssets.map(async (qualAsset: any) => {
-            if (qualAsset && qualAsset.assetFile) {
-                const qualPath = path.join(__dirname, '../../images', 'qualifications', `${qualAsset.assetFile}.png`);
+            qualAssets.map(async (qualAsset) => {
+            const typedAsset = qualAsset as unknown as AssetObject;
+            if (typedAsset && typedAsset.assetFile) {
+                const qualPath = path.join(__dirname, '../../images', 'qualifications', `${typedAsset.assetFile}.png`);
                 if (fs.existsSync(qualPath)) {
-                return { assetFile: qualAsset.assetFile, path: qualPath };
+                return { assetFile: typedAsset.assetFile, path: qualPath };
                 }
             }
             return null;
@@ -156,11 +161,12 @@ async generateUniform(userId: string, data: MemberData): Promise<Buffer> {
             data.certificates.map(c => (typeof c === 'string' ? c : c.id) || '').filter(Boolean));
         
         const certAssets2 = await Promise.all(
-            certAssets.map(async (certAsset: any) => {
-            if (certAsset && certAsset.assetFile) {
-                const certPath = path.join(__dirname, '../../images', 'certificates', `${certAsset.assetFile}.png`);
+            certAssets.map(async (certAsset) => {
+            const typedAsset = certAsset as unknown as AssetObject;
+            if (typedAsset && typedAsset.assetFile) {
+                const certPath = path.join(__dirname, '../../images', 'certificates', `${typedAsset.assetFile}.png`);
                 if (fs.existsSync(certPath)) {
-                return { assetFile: certAsset.assetFile, path: certPath };
+                return { assetFile: typedAsset.assetFile, path: certPath };
                 }
             }
             return null;
@@ -188,11 +194,12 @@ async generateUniform(userId: string, data: MemberData): Promise<Buffer> {
             data.awards.map(a => (typeof a === 'string' ? a : a.name) || '').filter(Boolean));
         
         const awardAssets2 = await Promise.all(
-            awardAssets.map(async (awardAsset: any) => {
-            if (awardAsset && awardAsset.assetFile) {
-                const awardPath = path.join(__dirname, '../../images', 'awards', `${awardAsset.assetFile}.png`);
+            awardAssets.map(async (awardAsset) => {
+            const typedAsset = awardAsset as unknown as AssetObject;
+            if (typedAsset && typedAsset.assetFile) {
+                const awardPath = path.join(__dirname, '../../images', 'awards', `${typedAsset.assetFile}.png`);
                 if (fs.existsSync(awardPath)) {
-                return { assetFile: awardAsset.assetFile, path: awardPath };
+                return { assetFile: typedAsset.assetFile, path: awardPath };
                 }
             }
             return null;
