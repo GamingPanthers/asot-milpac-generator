@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import mongoose from 'mongoose';
 import { Member } from '../src/models';
-import { ImageGeneratorService } from '../src/services/imageGenerator';
+import { UniformGeneratorService } from '../src/services/uniformGenerator';
 import { config } from '../src/config';
 import { closeDb } from '../src/lib/mongo';
 
@@ -24,18 +24,50 @@ async function main() {
     await mongoose.connect(config.MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true } as any);
     console.log('Connected to MongoDB');
 
-    const member = await Member.findOne({ memberID });
-    if (!member) {
+    const db = mongoose.connection.db;
+    
+    // Query milpacs collection (authoritative source) directly
+    // Convert memberID string to ObjectId for the query
+    const milpac = await db?.collection('milpacs').findOne({ _id: new mongoose.Types.ObjectId(memberID) } as any);
+    if (!milpac) {
       console.error(`No member found with memberID: ${memberID}`);
       process.exit(1);
     }
 
-    console.log(`Generating image for member: ${member.name} (${memberID})`);
-    const generator = new ImageGeneratorService();
-    const buffer = await generator.generateUniform(memberID, member.data);
+    console.log(`Generating image for member: ${milpac.name} (${memberID})`);
+    
+    // Normalize corps from "Army Aviation Corp" to "Aviation"
+    let corpsNormalized = '';
+    if (milpac.corps && typeof milpac.corps === 'string') {
+      corpsNormalized = milpac.corps
+        .replace('Army ', '')
+        .replace(' Corp', '')
+        .trim();
+    }
+
+    // Transform milpac data to generator format
+    const memberData = {
+      rank: milpac.rankName || '',
+      corps: corpsNormalized,
+      awards: milpac.awards || [],
+      qualifications: milpac.qualifications || [],
+      certificates: [],
+      name: milpac.name,
+      Uniform: '',
+      badge: '',
+      medallions: milpac.medallions || [],
+      citations: milpac.citations || [],
+      TrainingMedals: milpac.TrainingMedals || [],
+      RifleManBadge: '',
+      certificateType: 'award',
+      certificateAward: '',
+    };
+
+    const generator = new UniformGeneratorService();
+    const buffer = await generator.generateUniform(memberID, memberData);
 
     // Ensure output directory exists
-    const outDir = path.join(__dirname, '../milpac');
+    const outDir = path.join(__dirname, '../milpac/uniform');
     if (!fs.existsSync(outDir)) {
       fs.mkdirSync(outDir, { recursive: true });
     }

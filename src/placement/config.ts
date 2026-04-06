@@ -18,35 +18,52 @@ export const medalBoxPlacement: Record<string, { x: number; y: number; width: nu
   '4 Year': { x: 458, y: 102, width: 74, height: 155 },
   // Add more medals as needed, using the same spacing logic
 };
+
 import { PlacementConfig } from '../types';
 
 /**
  * Placement configuration for uniform image generation
- * Defines positions for rank, medals, citations, and badges
+ * Defines positions for rank, medals (awards), citations (certificates), and badges (qualifications)
+ * 
+ * Layout is designed to mimic a professional military uniform display:
+ * - Rank & shoulder insignia at TOP
+ * - Left chest: training badges/qualifications in vertical array
+ * - Center: name and corps emblem
+ * - Right chest: ribbons/citations
+ * - Lower chest: medals in organized rows
+ * 
+ * Canvas size: 1398 x 1000
+ * 
+ * Mapping:
+ * - medals: Used for data.awards (military decorations/medals)
+ * - citations: Used for data.certificates (formal citations/commendations) - RIGHT SIDE
+ * - badges: Used for data.qualifications (training badges/qualifications) - LEFT SIDE
+ * - rank: Used for data.rank (military rank insignia) - SHOULDER/TOP
  */
 export const placementConfig: PlacementConfig = {
   rank: {
-    x: 50,
-    y: 100,
-    spacing: 10,
+    x: 599,
+    y: 50,
+    spacing: 20,
+    maxColumns: 1,
   },
   medals: {
-    x: 50,
-    y: 250,
-    spacing: 5,
-    maxColumns: 8,
+    x: 250,
+    y: 500,
+    spacing: 20,
+    maxColumns: 7,
   },
   citations: {
-    x: 50,
-    y: 550,
-    spacing: 5,
-    maxColumns: 8,
+    x: 1050,
+    y: 180,
+    spacing: 20,
+    maxColumns: 1,
   },
   badges: {
     x: 50,
-    y: 800,
-    spacing: 10,
-    maxColumns: 4,
+    y: 180,
+    spacing: 20,
+    maxColumns: 1,
   },
   background: {
     width: 1398,

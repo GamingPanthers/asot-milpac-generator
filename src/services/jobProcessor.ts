@@ -1,7 +1,8 @@
 import { Job } from 'bullmq';
+import mongoose from 'mongoose';
 import { GenerationJob, GenerationLog as GenerationLogType } from '../types';
 import { GenerationLogModel } from '../models';
-import imageGeneratorService from './imageGenerator';
+import uniformGeneratorService from './uniformGenerator';
 import storageService from './storage';
 import memberService from './member';
 import WebIntegrationService from './webIntegration';
@@ -17,13 +18,48 @@ export class JobProcessor {
    */
   static async processGenerationJob(job: Job<GenerationJob>): Promise<any> {
     const startTime = Date.now();
-    const { memberID, name, data, jobId } = job.data;
+    const { memberID, jobId } = job.data;
 
     try {
       logger.info('Processing generation job', { memberID, jobId });
 
-      // Generate image
-      const imageBuffer = await imageGeneratorService.generateUniform(memberID, data);
+      // Fetch fresh data from milpacs (authoritative source)
+      const db = mongoose.connection.db;
+      const milpac = await db?.collection('milpacs').findOne({ _id: new mongoose.Types.ObjectId(memberID) } as any);
+      
+      if (!milpac) {
+        throw new Error(`Member not found in milpacs: ${memberID}`);
+      }
+
+      // Normalize corps from "Army Aviation Corp" to "Aviation"
+      let corpsNormalized = '';
+      if (milpac.corps && typeof milpac.corps === 'string') {
+        corpsNormalized = milpac.corps
+          .replace('Army ', '')
+          .replace(' Corp', '')
+          .trim();
+      }
+
+      // Transform milpac data to generator format
+      const memberData = {
+        rank: milpac.rankName || '',
+        corps: corpsNormalized,
+        awards: milpac.awards || [],
+        qualifications: milpac.qualifications || [],
+        certificates: [],
+        name: milpac.name,
+        Uniform: '',
+        badge: '',
+        medallions: milpac.medallions || [],
+        citations: milpac.citations || [],
+        TrainingMedals: milpac.TrainingMedals || [],
+        RifleManBadge: '',
+        certificateType: 'award',
+        certificateAward: '',
+      };
+
+      // Generate image with fresh data
+      const imageBuffer = await uniformGeneratorService.generateUniform(memberID, memberData);
 
       // Save image to disk in uniform folder
       const imagePath = await storageService.saveImage(memberID, imageBuffer, 'uniform');

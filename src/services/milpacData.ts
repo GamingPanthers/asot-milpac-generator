@@ -34,13 +34,16 @@ export class MilpacDataService {
       const jsonData = fs.readFileSync(dataPath, 'utf-8');
       this.data = JSON.parse(jsonData) as MilpacData;
 
-      // Build rank lookup map (by code and abbreviation)
+      // Build rank lookup map (by code, abbreviation, and name)
       this.data.ranks.forEach((rank) => {
         if (rank.code && !rank.name.includes('Billet')) {
           this.rankMap.set(rank.code.toUpperCase(), rank);
         }
         if (rank.abbr && !rank.name.includes('Billet')) {
           this.rankMap.set(rank.abbr.toUpperCase(), rank);
+        }
+        if (rank.name && !rank.name.includes('Billet')) {
+          this.rankMap.set(rank.name.toUpperCase(), rank);
         }
       });
 

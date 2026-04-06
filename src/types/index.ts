@@ -120,8 +120,8 @@ export interface PlacementConfig {
 export interface PlacementPosition {
   x: number;
   y: number;
-  spacing?: number;
-  maxColumns?: number;
+  spacing: number;
+  maxColumns: number;
 }
 
 /**

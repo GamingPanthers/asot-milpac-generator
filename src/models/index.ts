@@ -83,6 +83,7 @@ generationLogSchema.index({ timestamp: 1 }, { expireAfterSeconds: 2592000 });
  * Add compound index for efficient member + job queries
  */
 memberSchema.index({ memberID: 1, lastUpdated: -1 });
+memberSchema.index({ 'data.corps': 1 }); // Index for uniform color selection lookups
 generationLogSchema.index({ memberID: 1, timestamp: -1 });
 
 export const Member = mongoose.model<StoredMember & Document>('Member', memberSchema);
